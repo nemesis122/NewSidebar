@@ -56,6 +56,10 @@ Long IP addresses wrap instead of overlapping nearby values.
 
 ## Hardware and sensor access
 
+[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.9.0/Hardware-Demo.png" width="350" alt="Current two-column sidebar with demo hardware">](https://github.com/nemesis122/NewSidebar/releases/download/v2.9.0/Hardware-Demo.png)
+
+Current Twin Rings layout with simulated hardware readings and documentation IPs.
+
 Uses LibreHardwareMonitor 0.9.6 for AMD/Intel CPUs and NVIDIA/AMD/Intel GPUs.
 Actual readings depend on the hardware, motherboard, driver and access rights.
 Physically checked on Ryzen 9 5900X and RTX 3080; not every model has been tested.

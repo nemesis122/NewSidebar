@@ -1,0 +1,105 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text.Json;
+
+namespace Aurora;
+
+public sealed class Preferences
+{
+    public string Monitor { get; set; } = "";
+    public string Side { get; set; } = "Rechts";
+    public double ColumnWidth { get; set; } = 290;
+    public int Columns { get; set; } = 1;
+    public bool Topmost { get; set; } = false;
+    public bool ReserveSpace { get; set; }
+    public double Opacity { get; set; } = 1;
+    public string TextColor { get; set; } = "";
+    public string LabelColor { get; set; } = "";
+    public string HardwareNameColor { get; set; } = "";
+    public string ValueColor { get; set; } = "";
+    public string GraphTrackColor { get; set; } = "";
+    public string SecondaryGraphColor { get; set; } = "";
+    public Dictionary<string,string> GraphColors { get; set; } = new();
+    public double GraphScale { get; set; } = 1;
+    public int Interval { get; set; } = 1000;
+    public bool Fit { get; set; } = false;
+    public bool Fahrenheit { get; set; }
+    public string Theme { get; set; } = "Original";
+    public string Layout { get; set; } = "Original";
+    public string SettingsLanguage { get; set; } = "de";
+    public Dictionary<string,string> CpuTemperatureSources { get; set; } = new();
+    public List<string> HiddenMetrics { get; set; } = new();
+    public double FontScale { get; set; } = 1;
+    public double TempLimit { get; set; } = 85;
+    public double LoadLimit { get; set; } = 95;
+    public List<string> HiddenCategories { get; set; } = new() { "Mainboard", "Controller" };
+    public bool DeviceDefaultsApplied { get; set; }
+    public List<string> HiddenDevices { get; set; } = new();
+    public List<string> Pins { get; set; } = new();
+    public Dictionary<string,string> PinTargets { get; set; } = new();
+    public int PinVisibilityVersion { get; set; }
+    public List<string> Order { get; set; } = new() { "CPU", "RAM", "GPU", "Drives", "Network", "Mainboard", "Controller", "Custom" };
+    public static string Directory => System.IO.Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
+    public static string Path => System.IO.Path.Combine(Directory, "aurora-settings.json");
+    public static Preferences Load()
+    {
+        try
+        {
+            var json=File.ReadAllText(Path);
+            var p = JsonSerializer.Deserialize<Preferences>(json) ?? new();
+            using var document=JsonDocument.Parse(json);
+            if(!document.RootElement.TryGetProperty("Layout",out _))p.Layout=p.Theme switch {"Original"=>"Original","Compact" or "Terminal"=>"Compact","Minimal"=>"Text",_=>"Modern"};
+            p.ColumnWidth = Math.Clamp(p.ColumnWidth, 240, 440);
+            p.Columns = Math.Clamp(p.Columns, 1, 4);
+            p.Opacity = Math.Clamp(p.Opacity, 0, 1);
+            p.Interval = Math.Clamp(p.Interval, 500, 10000);
+            p.FontScale = Math.Clamp(p.FontScale, .85, 1.4);
+            p.GraphScale = double.IsFinite(p.GraphScale)?Math.Clamp(p.GraphScale,.5,1.6):1; p.GraphColors ??= new();
+            p.HiddenCategories ??= new(); p.HiddenDevices ??= new(); p.Pins ??= new(); p.PinTargets ??= new(); p.CpuTemperatureSources ??= new(); p.HiddenMetrics ??= new();
+            if(p.PinVisibilityVersion<1){if(p.Pins.Count>0){p.HiddenCategories.RemoveAll(id=>id=="Custom");p.HiddenDevices.RemoveAll(id=>id=="custom");}p.PinVisibilityVersion=1;}
+            p.Order ??= new() { "CPU", "RAM", "GPU", "Drives", "Network", "Mainboard", "Controller", "Custom" };
+            return p;
+        }
+        catch { return new(); }
+    }
+    public void Save()
+    {
+        var temporary = Path + ".tmp";
+        File.WriteAllText(temporary, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+        File.Move(temporary, Path, true);
+    }
+    public void SetPinned(string sensorId,bool pinned)
+    {
+        Pins.RemoveAll(id=>id==sensorId);
+        if(pinned) { Pins.Add(sensorId); HiddenCategories.RemoveAll(id=>id=="Custom"); HiddenDevices.RemoveAll(id=>id=="custom"); }
+    }
+    public bool IsMetricVisible(string deviceId,string metricId)=>!HiddenMetrics.Contains(deviceId+"|"+metricId);
+    public void SetMetricVisible(string deviceId,string metricId,bool visible)
+    {
+        string key=deviceId+"|"+metricId;HiddenMetrics.RemoveAll(item=>item==key);if(!visible)HiddenMetrics.Add(key);
+    }
+}
+
+public record Metric(string Id, string Label, double? Value, string Unit, double Maximum = 100,string? Source=null)
+{
+    public string Display(bool fahrenheit)
+    {
+        if (!Value.HasValue || !double.IsFinite(Value.Value)) return "—";
+        double v = Value.Value;
+        string u = Unit;
+        if (u == "°C" && fahrenheit) { v = v * 1.8 + 32; u = "°F"; }
+        if(u=="MB/s")return Math.Floor(Math.Max(0,v)).ToString("0")+" MB/s";
+        if (u == "B/s")
+        {
+            string[] units = { "B/s", "KB/s", "MB/s", "GB/s" }; int i = 0;
+            while (v >= 1024 && i < 3) { v /= 1024; i++; }
+            return $"{v:0.#} {units[i]}";
+        }
+        if (u == "MHz" && v >= 1000) return $"{v / 1000:0.00} GHz";
+        return v.ToString(u == "V" ? "0.00" : u == "GB" ? "0.0" : "0.#") + " " + u;
+    }
+}
+public record Device(string Id, string Category, string Name, List<Metric> Metrics, bool DefaultVisible = true);
+public record SensorRow(string Id, string Device, string Name, string Kind, double? Value, string Unit,string HardwareKind="");
+public record Snapshot(List<Device> Devices, List<SensorRow> Sensors, List<string> Warnings, DateTime Time);

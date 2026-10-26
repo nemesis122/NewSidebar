@@ -1,0 +1,51 @@
+# Sidebar by NemeSIS
+
+A native, portable Windows hardware sidebar for CPU, RAM, GPU, drives and network.
+
+## Download
+
+[Download the portable EXE](https://github.com/nemesis122/NewSidebar/releases/latest)
+
+Windows 10/11 x64. Run the EXE from a writable folder. The .NET runtime is bundled;
+settings are stored in `aurora-settings.json` beside the EXE.
+
+## Preview
+
+![Nerd designs — simulated sensor readings](https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Nerd-Designs-Preview.gif)
+
+The animation uses clearly labeled simulated readings. An eight-second AVI video
+and additional screenshots are available with the release.
+
+## Features
+
+- 48 layout variants, including large-reading options; 14 independent color themes.
+- Hex-Core, Bitfield, Rackmount, gauges, LED meters, console and compact lists.
+- Configurable text colors, per-category instrument accents and widget background opacity.
+- One to four columns, multiple monitors, fit-to-view and scrolling with hover scrollbar.
+- Custom sensors in their matching widgets; selectable CPU temperature source.
+- Settings in German, English, French, Italian, Spanish and Portuguese.
+- Sidebar labels always remain English, with short Temp / Clock / DL / UL / Link labels.
+- Optional automatic startup after sensor access has been configured.
+
+## Hardware and sensor access
+
+Uses LibreHardwareMonitor 0.9.6 for AMD/Intel CPUs and NVIDIA/AMD/Intel GPUs.
+Actual readings depend on the hardware, motherboard, driver and access rights.
+Physically checked on Ryzen 9 5900X and RTX 3080; not every model has been tested.
+Some sensors require PawnIO and one-time administrator setup via Settings.
+The portable application itself does not require an application installer.
+
+## Build and validation
+
+Requires Windows and the .NET 8 SDK. Run `Build-Portable.ps1` from this repository.
+
+```powershell
+dotnet run --project Tests/Checks.csproj -c Release --configfile Source/NuGet.Config
+dotnet run --project UITests/LayoutQA.csproj -c Release --configfile UITests/NuGet.Config
+```
+
+Version 2.8.0 passed 15,522 native checks and 2,688 layout/color/width combinations,
+including additional 1440p/4K layout checks at 100/150/200 percent DPI.
+Software layout tests do not constitute physical validation of all hardware models.
+
+See `THIRD-PARTY-NOTICES.txt` and `Licenses/` for dependency notices.

@@ -23,6 +23,8 @@ public sealed class Preferences
     public Dictionary<string,string> GraphColors { get; set; } = new();
     public double GraphScale { get; set; } = 1;
     public int Interval { get; set; } = 1000;
+    public Dictionary<string,NetworkAddressState> NetworkAddresses { get; set; } = new();
+    public List<string> VisibleNetworkAddresses { get; set; } = new();
     public bool Fit { get; set; } = false;
     public bool Fahrenheit { get; set; }
     public string Theme { get; set; } = "Original";
@@ -50,12 +52,13 @@ public sealed class Preferences
             var p = JsonSerializer.Deserialize<Preferences>(json) ?? new();
             using var document=JsonDocument.Parse(json);
             if(!document.RootElement.TryGetProperty("Layout",out _))p.Layout=p.Theme switch {"Original"=>"Original","Compact" or "Terminal"=>"Compact","Minimal"=>"Text",_=>"Modern"};
-            p.ColumnWidth = Math.Clamp(p.ColumnWidth, 240, 440);
+            p.ColumnWidth = Math.Clamp(p.ColumnWidth, 200, 440);
             p.Columns = Math.Clamp(p.Columns, 1, 4);
             p.Opacity = Math.Clamp(p.Opacity, 0, 1);
             p.Interval = Math.Clamp(p.Interval, 500, 10000);
-            p.FontScale = Math.Clamp(p.FontScale, .85, 1.4);
+            p.FontScale = Math.Clamp(p.FontScale, .65, 1.4);
             p.GraphScale = double.IsFinite(p.GraphScale)?Math.Clamp(p.GraphScale,.5,1.6):1; p.GraphColors ??= new();
+            p.NetworkAddresses ??= new();p.VisibleNetworkAddresses ??= new();
             p.HiddenCategories ??= new(); p.HiddenDevices ??= new(); p.Pins ??= new(); p.PinTargets ??= new(); p.CpuTemperatureSources ??= new(); p.HiddenMetrics ??= new();
             if(p.PinVisibilityVersion<1){if(p.Pins.Count>0){p.HiddenCategories.RemoveAll(id=>id=="Custom");p.HiddenDevices.RemoveAll(id=>id=="custom");}p.PinVisibilityVersion=1;}
             p.Order ??= new() { "CPU", "RAM", "GPU", "Drives", "Network", "Mainboard", "Controller", "Custom" };
@@ -74,17 +77,22 @@ public sealed class Preferences
         Pins.RemoveAll(id=>id==sensorId);
         if(pinned) { Pins.Add(sensorId); HiddenCategories.RemoveAll(id=>id=="Custom"); HiddenDevices.RemoveAll(id=>id=="custom"); }
     }
-    public bool IsMetricVisible(string deviceId,string metricId)=>!HiddenMetrics.Contains(deviceId+"|"+metricId);
+    public static bool IsAddressMetric(string metricId)=>metricId.EndsWith("/internal-ip",StringComparison.Ordinal)||metricId.EndsWith("/external-ip",StringComparison.Ordinal);
+    public bool IsMetricVisible(string deviceId,string metricId)=>IsAddressMetric(metricId)?VisibleNetworkAddresses.Contains(deviceId+"|"+metricId):!HiddenMetrics.Contains(deviceId+"|"+metricId);
     public void SetMetricVisible(string deviceId,string metricId,bool visible)
     {
+        if(IsAddressMetric(metricId)){string addressKey=deviceId+"|"+metricId;VisibleNetworkAddresses.RemoveAll(item=>item==addressKey);if(visible)VisibleNetworkAddresses.Add(addressKey);return;}
         string key=deviceId+"|"+metricId;HiddenMetrics.RemoveAll(item=>item==key);if(!visible)HiddenMetrics.Add(key);
     }
 }
 
-public record Metric(string Id, string Label, double? Value, string Unit, double Maximum = 100,string? Source=null)
+public record NetworkAddressState(string? InternalIP=null,string? ExternalIP=null,DateTimeOffset? InternalUpdated=null,DateTimeOffset? ExternalUpdated=null);
+
+public record Metric(string Id, string Label, double? Value, string Unit, double Maximum = 100,string? Source=null,string? TextValue=null)
 {
     public string Display(bool fahrenheit)
     {
+        if(TextValue!=null)return TextValue;
         if (!Value.HasValue || !double.IsFinite(Value.Value)) return "—";
         double v = Value.Value;
         string u = Unit;

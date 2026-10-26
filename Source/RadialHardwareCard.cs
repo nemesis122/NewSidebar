@@ -32,6 +32,7 @@ public sealed class RadialHardwareCard:Border,IHardwareCard
    var instrument=new StackPanel{HorizontalAlignment=HorizontalAlignment.Left,VerticalAlignment=VerticalAlignment.Top,Margin=new Thickness(0,0,8,0)};instrument.Children.Add(dial.View);
    content.Children.Add(instrument);
   }
+  if(primary==null)content.ColumnDefinitions[0].Width=new GridLength(0);
   var values=new StackPanel{VerticalAlignment=VerticalAlignment.Top};System.Windows.Automation.AutomationProperties.SetAutomationId(values,"GaugeReadings");Grid.SetColumn(values,1);content.Children.Add(values);
   foreach(var metric in device.Metrics){var row=new Readout(metric,prefs.FontScale*CardLayouts.ReadingMultiplier(prefs.Layout),prefs,design.Text);readings[metric.Id]=row;values.Children.Add(row.View);}
  }
@@ -47,10 +48,10 @@ public sealed class RadialHardwareCard:Border,IHardwareCard
   private readonly TextBlock value;
   public Readout(Metric metric,double scale,Preferences prefs,string textColor)
   {
-   var label=Ui.SidebarText(metric.Label,10*scale,"Muted");label.ToolTip=Ui.SidebarFullLabel(metric.Label);value=Ui.Text("—",11*scale);value.Foreground=Ui.ValueBrush(prefs,textColor);value.FontFamily=new FontFamily("Cascadia Mono, Consolas");value.TextTrimming=TextTrimming.CharacterEllipsis;
+   var label=Ui.SidebarText(metric.Label,10*scale,"Muted");label.ToolTip=Ui.SidebarFullLabel(metric.Label);value=Ui.Text("—",11*scale);value.Foreground=Ui.ValueBrush(prefs,textColor);value.FontFamily=new FontFamily("Cascadia Mono, Consolas");value.TextTrimming=TextTrimming.CharacterEllipsis;if(metric.Unit=="IP"){value.TextWrapping=TextWrapping.Wrap;value.TextTrimming=TextTrimming.None;}
    View=new ReadoutPanel(label,value,11*scale){Margin=new Thickness(0,1,0,2)};
   }
-  public void Update(Metric metric,Preferences prefs){value.Text=metric.Display(prefs.Fahrenheit);value.ToolTip=Ui.SidebarFullLabel(metric.Label)+" · "+value.Text;}
+  public void Update(Metric metric,Preferences prefs){value.Text=metric.Display(prefs.Fahrenheit);value.ToolTip=Ui.SidebarFullLabel(metric.Label)+" · "+value.Text+(metric.Source==null?"":"\n"+metric.Source);}
  }
  // Choose line wrapping during Measure, never in SizeChanged/Arrange callbacks.
  // This prevents a text reflow from starting another layout pass indefinitely.
@@ -61,7 +62,7 @@ public sealed class RadialHardwareCard:Border,IHardwareCard
   private static double TextWidth(TextBlock text,double? size=null)=>new FormattedText(text.Text,CultureInfo.InvariantCulture,FlowDirection.LeftToRight,new Typeface(text.FontFamily,text.FontStyle,text.FontWeight,text.FontStretch),size??text.FontSize,Brushes.White,VisualTreeHelper.GetDpi(text).PixelsPerDip).WidthIncludingTrailingWhitespace;
   protected override Size MeasureOverride(Size available)
   {
-   double width=double.IsFinite(available.Width)?Math.Max(0,available.Width):400;double textWidth=TextWidth(value,font);double nextFont=textWidth>width?Math.Max(8,font*width/Math.Max(1,textWidth)):font;if(Math.Abs(value.FontSize-nextFont)>.01)value.FontSize=nextFont;
+   double width=double.IsFinite(available.Width)?Math.Max(0,available.Width):400;double textWidth=TextWidth(value,font);double nextFont=textWidth>width?Math.Max(Math.Min(8,font),font*width/Math.Max(1,textWidth)):font;if(Math.Abs(value.FontSize-nextFont)>.01)value.FontSize=nextFont;
    inline=TextWidth(label)+TextWidth(value)+7<=width;label.TextWrapping=inline?TextWrapping.NoWrap:TextWrapping.Wrap;
    value.Measure(new Size(width,double.PositiveInfinity));label.Measure(new Size(inline?Math.Max(0,width-value.DesiredSize.Width-7):width,double.PositiveInfinity));
    return new Size(width,inline?Math.Max(label.DesiredSize.Height,value.DesiredSize.Height):label.DesiredSize.Height+value.DesiredSize.Height);

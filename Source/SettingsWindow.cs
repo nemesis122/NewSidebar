@@ -13,6 +13,9 @@ namespace Aurora;
 public sealed class SettingsWindow : Window
 {
     private readonly SidebarWindow sidebar;
+    private readonly System.Threading.CancellationTokenSource addressCancellation=new();
+    private bool addressBusy;
+    private readonly NetworkAddressLookup addressLookup;
     private Preferences P => sidebar.Prefs;
     private readonly StackPanel page = new() { Margin = new Thickness(20,16,20,16) };
     private readonly TextBlock subtitle = Ui.Text("",13,"Muted");
@@ -30,9 +33,10 @@ public sealed class SettingsWindow : Window
     private string? selectedDeviceId, pendingTarget;
     private StackPanel? deviceDetails;
     private string current = "Position";
-    public SettingsWindow(SidebarWindow sidebar)
+    public SettingsWindow(SidebarWindow sidebar,NetworkAddressLookup? networkLookup=null)
     {
-        this.sidebar = sidebar;
+        this.sidebar = sidebar;addressLookup=networkLookup??new NetworkAddressLookup();
+        Closed+=(_,_)=>addressCancellation.Cancel();
         SettingsText.CurrentLanguage=P.SettingsLanguage;
         foreach(var pair in new[]{("Back","#10141C"),("Panel","#181E29"),("Edge","#2B3544"),("Text","#ECF2FA"),("Muted","#AAB6C7"),("Accent","#6ACCEB")})Resources[pair.Item1]=Ui.Brush(pair.Item2);
         void CompactStyle(Type type,params Setter[] setters){var style=new Style(type,(Style)FindResource(type));foreach(var setter in setters)style.Setters.Add(setter);Resources[type]=style;}
@@ -136,7 +140,7 @@ public sealed class SettingsWindow : Window
                 Select("Bildschirmseite", new[]{"Rechts","Links"},P.Side,s=>P.Side=s);
                 });
                 Card("Größe & Anordnung",()=> {
-                Slider("Breite pro Spalte (px)",240,440,P.ColumnWidth,10,"0",v=>P.ColumnWidth=v);
+                Slider("Breite pro Spalte (px)",200,440,P.ColumnWidth,10,"0",v=>P.ColumnWidth=v);
                 Select("Karten nebeneinander",new[]{1,2,3,4},P.Columns,v=>P.Columns=v);
                 Check("Alle Karten auf eine Ansicht einpassen",P.Fit,v=>P.Fit=v);
                 Note("Einpassen aus: Karten behalten ihre Größe und lassen sich scrollen.");
@@ -151,7 +155,7 @@ public sealed class SettingsWindow : Window
                 Heading("Design & Schrift","Layout verändert den Aufbau. Das Farbschema bestimmt die Farben deiner Sidebar.");
                 Card("Darstellung",()=>{LayoutPicker();DesignPicker();});
                 Card("Schrift & Anzeige",()=> {
-                Slider("Schriftgröße (%)",85,140,P.FontScale*100,5,"0",v=>P.FontScale=v/100);
+                Slider("Schriftgröße (%)",65,140,P.FontScale*100,5,"0",v=>P.FontScale=v/100);
                 Slider("Widget-Hintergrund (%)",0,100,P.Opacity*100,5,"0",v=>P.Opacity=v/100);
                 Select("Temperatureinheit",new[]{"°C","°F"},P.Fahrenheit?"°F":"°C",v=>P.Fahrenheit=v=="°F");
                 });
@@ -270,6 +274,17 @@ public sealed class SettingsWindow : Window
         Label("Sichtbare Werte");
         var own=P.Pins.Where(id=>(PinPlacement.Target(sidebar.Latest,P,id)?.Id??"custom")==device.Id).Distinct().ToHashSet();
         MetricChecks(device with{Metrics=device.Metrics.Where(m=>!own.Contains(m.Id)).ToList()});
+        if(device.Category=="Network"){
+            var refresh=Ui.Button(addressBusy?"IP-Adressen werden abgerufen …":"IP-Adressen abrufen / aktualisieren",()=>{});refresh.IsEnabled=!addressBusy;System.Windows.Automation.AutomationProperties.SetAutomationId(refresh,"RefreshNetworkAddresses");
+            refresh.Click+=async(_,_)=>{
+                if(addressBusy)return;addressBusy=true;refresh.IsEnabled=false;refresh.Content=SettingsText.Translate("IP-Adressen werden abgerufen …",P.SettingsLanguage);
+                try{P.NetworkAddresses.TryGetValue(device.Id,out var previous);var result=await addressLookup.FetchAsync(device.Id,previous,P.IsMetricVisible(device.Id,device.Id+"/external-ip"),addressCancellation.Token);if(addressCancellation.IsCancellationRequested)return;P.NetworkAddresses[device.Id]=result.State;sidebar.Apply();if(result.ExternalFailed)MessageBox.Show(this,SettingsText.Translate("Externe IP nicht erreichbar. Der bisherige Wert bleibt gespeichert.",P.SettingsLanguage),"IP");}
+                catch(OperationCanceledException){}
+                catch(Exception){if(!addressCancellation.IsCancellationRequested)MessageBox.Show(this,SettingsText.Translate("IP-Abfrage fehlgeschlagen. Gespeicherte Werte bleiben erhalten.",P.SettingsLanguage),"IP");}
+                finally{addressBusy=false;if(!addressCancellation.IsCancellationRequested&&current=="Geräte")RenderDeviceDetails();}
+            };
+            page.Children.Add(refresh);Note("IP-Adressen werden nur per Button abgerufen und gespeichert. Keine automatische Aktualisierung.");Note("Externe IP: api64.ipify.org über die Standardroute, nicht zwingend über den ausgewählten Adapter.");
+        }
         Label("Eigene Sensoren");
         if(own.Count==0)Note("Keine eigenen Sensoren hinzugefügt.");
         foreach(string id in own)
@@ -388,7 +403,7 @@ public sealed class SettingsWindow : Window
         if(current == "System")
         {
             bool admin = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
-            diagnostics.Text = $"Sidebar by NemeSIS 2.8 · .NET {Environment.Version}\nZugriff: {(admin ? "Administrator" : "Standardbenutzer")}\n"+ScheduledAutostart.Describe()+"\n"+
+            diagnostics.Text = $"Sidebar by NemeSIS 2.9 · .NET {Environment.Version}\nZugriff: {(admin ? "Administrator" : "Standardbenutzer")}\n"+ScheduledAutostart.Describe()+"\n"+
                 (snapshot == null ? "Sensoren werden initialisiert …" : $"{snapshot.Devices.Count} Geräte · {snapshot.Sensors.Count} Messwerte · {snapshot.Time:HH:mm:ss}\n"+string.Join("\n",snapshot.Warnings));
             SettingsText.Apply(this,P.SettingsLanguage);
         }

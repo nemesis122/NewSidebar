@@ -14,7 +14,7 @@ public static class CardLayouts
  public static CardLayout Get(string? key)=>All.FirstOrDefault(l=>l.Key==key)??All[0];
  public static string BaseLayout(string? key){string value=Get(key).Key;return value.EndsWith(".Large",StringComparison.Ordinal)?value[..^6]:value;}
  public static double ReadingMultiplier(string? key)=>Get(key).Key.EndsWith(".Large",StringComparison.Ordinal)?1.35:1;
- public static Metric? MainMetric(Device device)=>device.Category=="Network"?device.Metrics.FirstOrDefault():device.Metrics.FirstOrDefault(m=>m.Unit=="°C" && m.Label.StartsWith("Temperatur",StringComparison.OrdinalIgnoreCase))??device.Metrics.FirstOrDefault(m=>m.Unit=="°C")??device.Metrics.FirstOrDefault();
+ public static Metric? MainMetric(Device device)=>device.Category=="Network"?device.Metrics.FirstOrDefault(m=>m.Unit!="IP"):device.Metrics.FirstOrDefault(m=>m.Unit=="°C" && m.Label.StartsWith("Temperatur",StringComparison.OrdinalIgnoreCase))??device.Metrics.FirstOrDefault(m=>m.Unit=="°C")??device.Metrics.FirstOrDefault();
  public static IHardwareCard Create(Device d,Preferences p)
  {
   string layout=BaseLayout(p.Layout);
@@ -43,25 +43,26 @@ public sealed class AlternateHardwareCard:Border,IHardwareCard
   var body=new StackPanel();Child=body;var header=new StackPanel{Orientation=Orientation.Horizontal,Margin=new Thickness(0,0,0,4)};header.Children.Add(Ui.HardwareIcon(device.Category,15*scale));var title=Ui.SidebarText(device.Category,13*scale);title.FontWeight=FontWeights.SemiBold;header.Children.Add(title);body.Children.Add(header);
   var name=Ui.HardwareTitle(device.Name,10*scale);name.TextTrimming=TextTrimming.CharacterEllipsis;name.ToolTip=Ui.HardwareName(device.Name);name.Margin=new Thickness(0,0,0,layout=="Compact"?4:10);body.Children.Add(name);
   if(layout=="Gauges" && device.Metrics.Count>0)Gauge(body,device);
-  else if(layout=="Dashboard" && device.Metrics.Count>0)Dashboard(body,device);
+  else if(layout=="Dashboard" && device.Metrics.Count>0 && CardLayouts.MainMetric(device)!=null)Dashboard(body,device);
   else if(layout=="Tiles")Tiles(body,device.Metrics);
   else foreach(var m in device.Metrics)Row(body,m,layout=="Bars",layout=="Compact");
  }
  private TextBlock Value(Metric m,double size,bool primary=false){var v=Ui.Text("—",size*(primary?scale:readingScale));v.Foreground=Ui.ValueBrush(preferences,design.Text);v.TextTrimming=TextTrimming.CharacterEllipsis;v.FontFamily=new FontFamily(design.Font=="Consolas"?"Consolas":"Cascadia Mono, Consolas");if(!values.TryGetValue(m.Id,out var entries))values[m.Id]=entries=new();entries.Add((v,null,null));return v;}
  private void Row(Panel parent,Metric m,bool bar,bool compact=false)
  {
+  if(m.Unit=="IP"){var ipRow=new StackPanel{Margin=new Thickness(0,3,0,3)};ipRow.Children.Add(Ui.SidebarText(m.Label,11*readingScale,"Muted"));var ipValue=Value(m,compact?11:12);ipValue.TextWrapping=TextWrapping.Wrap;ipValue.TextTrimming=TextTrimming.None;ipRow.Children.Add(ipValue);parent.Children.Add(ipRow);return;}
   var row=new DockPanel{Margin=new Thickness(0,compact?1:bar?5:3,0,compact?1:3),ClipToBounds=true};var v=Value(m,compact?11:12);DockPanel.SetDock(v,Dock.Right);row.Children.Add(v);row.SizeChanged+=(_,_)=>v.MaxWidth=Math.Max(30,row.ActualWidth*.68);var label=Ui.SidebarText(m.Label,11*readingScale,"Muted");label.TextTrimming=TextTrimming.CharacterEllipsis;label.ToolTip=Ui.SidebarFullLabel(m.Label);label.Margin=new Thickness(0,0,10,0);row.Children.Add(label);parent.Children.Add(row);
   if(bar){var track=new Border{Background=Ui.Brush(design.Track),Height=8*DesignCatalog.GraphSize(preferences),CornerRadius=new(4),Margin=new Thickness(0,0,0,6)};var fill=new Border{Background=Ui.Brush(accent),Height=8*DesignCatalog.GraphSize(preferences),Width=0,HorizontalAlignment=HorizontalAlignment.Left,CornerRadius=new(4)};track.Child=fill;parent.Children.Add(track);values[m.Id][^1]=(v,fill,track);track.SizeChanged+=(_,_)=>{if(fill.Tag is double ratio)fill.Width=track.ActualWidth*ratio;};}
  }
  private void Tiles(Panel parent,IEnumerable<Metric> metrics)
  {
   var grid=new System.Windows.Controls.Primitives.UniformGrid{Columns=2,Margin=new Thickness(-3)};
-  foreach(var m in metrics){var cell=new StackPanel();var label=Ui.SidebarText(m.Label,9*readingScale,"Muted");label.TextTrimming=TextTrimming.CharacterEllipsis;label.ToolTip=Ui.SidebarFullLabel(m.Label);cell.Children.Add(label);var v=Value(m,17);v.Foreground=Ui.ValueBrush(preferences,accent);v.Margin=new Thickness(0,6,0,0);if(readingScale>scale){label.TextWrapping=TextWrapping.Wrap;label.TextTrimming=TextTrimming.None;v.TextWrapping=TextWrapping.Wrap;v.TextTrimming=TextTrimming.None;}cell.Children.Add(v);grid.Children.Add(new Border{Padding=new Thickness(9),Margin=new Thickness(3),CornerRadius=new(6),BorderBrush=Ui.Brush(design.Edge),BorderThickness=new Thickness(1),Child=cell});}parent.Children.Add(grid);
+  foreach(var m in metrics){var cell=new StackPanel();var label=Ui.SidebarText(m.Label,9*readingScale,"Muted");label.TextTrimming=TextTrimming.CharacterEllipsis;label.ToolTip=Ui.SidebarFullLabel(m.Label);cell.Children.Add(label);var v=Value(m,17);v.Foreground=Ui.ValueBrush(preferences,accent);v.Margin=new Thickness(0,6,0,0);if(readingScale>scale||m.Unit=="IP"){label.TextWrapping=TextWrapping.Wrap;label.TextTrimming=TextTrimming.None;v.TextWrapping=TextWrapping.Wrap;v.TextTrimming=TextTrimming.None;}cell.Children.Add(v);grid.Children.Add(new Border{Padding=new Thickness(9),Margin=new Thickness(3),CornerRadius=new(6),BorderBrush=Ui.Brush(design.Edge),BorderThickness=new Thickness(1),Child=cell});}parent.Children.Add(grid);
  }
  private void Dashboard(Panel parent,Device device)
  {
   var hero=Value(device.Metrics[0],32,true);System.Windows.Automation.AutomationProperties.SetAutomationId(hero,"PrimaryMetric");hero.Foreground=Ui.ValueBrush(preferences,accent);hero.FontWeight=FontWeights.SemiBold;parent.Children.Add(hero);var label=Ui.SidebarText(device.Metrics[0].Label,10*scale,"Muted");label.Margin=new Thickness(0,2,0,10);parent.Children.Add(label);var grid=new System.Windows.Controls.Primitives.UniformGrid{Columns=2};
-  foreach(var m in device.Category=="Network"?device.Metrics:device.Metrics.Skip(1)){var cell=new StackPanel{Margin=new Thickness(0,5,6,6)};var v=Value(m,15);cell.Children.Add(v);var text=Ui.SidebarText(m.Label,9*readingScale,"Muted");text.TextTrimming=TextTrimming.CharacterEllipsis;text.ToolTip=Ui.SidebarFullLabel(m.Label);text.Margin=new Thickness(0,2,0,0);if(readingScale>scale){text.TextWrapping=TextWrapping.Wrap;text.TextTrimming=TextTrimming.None;v.TextWrapping=TextWrapping.Wrap;v.TextTrimming=TextTrimming.None;}cell.Children.Add(text);grid.Children.Add(cell);}parent.Children.Add(grid);
+  foreach(var m in device.Category=="Network"?device.Metrics:device.Metrics.Skip(1)){var cell=new StackPanel{Margin=new Thickness(0,5,6,6)};var v=Value(m,15);cell.Children.Add(v);var text=Ui.SidebarText(m.Label,9*readingScale,"Muted");text.TextTrimming=TextTrimming.CharacterEllipsis;text.ToolTip=Ui.SidebarFullLabel(m.Label);text.Margin=new Thickness(0,2,0,0);if(readingScale>scale||m.Unit=="IP"){text.TextWrapping=TextWrapping.Wrap;text.TextTrimming=TextTrimming.None;v.TextWrapping=TextWrapping.Wrap;v.TextTrimming=TextTrimming.None;}cell.Children.Add(text);grid.Children.Add(cell);}parent.Children.Add(grid);
  }
  private void Gauge(Panel parent,Device device)
  {

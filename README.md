@@ -11,10 +11,25 @@ settings are stored in `aurora-settings.json` beside the EXE.
 
 ## Preview
 
-![Nerd designs — simulated sensor readings](https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Nerd-Designs-Preview.gif)
+### Selected color themes
 
-The animation uses clearly labeled simulated readings. An eight-second AVI video
-and additional screenshots are available with the release.
+Click a thumbnail to open the full image. All examples show **Twin rings** with simulated readings.
+
+| OLED Black | Midnight | Nord |
+| :---: | :---: | :---: |
+| [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-OLED.png" width="150" alt="OLED Black">](https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-OLED.png) | [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-Midnight.png" width="150" alt="Midnight">](https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-Midnight.png) | [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-Nord.png" width="150" alt="Nord">](https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-Nord.png) |
+| **Dracula** | **Terminal** | **Light** |
+| [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-Dracula.png" width="150" alt="Dracula">](https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-Dracula.png) | [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-Terminal.png" width="150" alt="Terminal">](https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-Terminal.png) | [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-Light.png" width="150" alt="Light">](https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-Light.png) |
+
+### Two columns & settings
+
+| Twin Rings · two columns | Settings menu |
+| :---: | :---: |
+| [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/TwinRings-2Columns.png" width="180" alt="Twin Rings with two columns">](https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/TwinRings-2Columns.png) | [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Settings-Preview.png" width="280" alt="Settings menu">](https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Settings-Preview.png) |
+
+### Nerd designs
+
+[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Nerd-Designs.png" width="420" alt="Hex-Core, Bitfield and Rackmount">](https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Nerd-Designs.png)
 
 ## Features
 

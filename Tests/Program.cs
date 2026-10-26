@@ -1,5 +1,6 @@
 ﻿using Aurora;
 using System.Text.Json;
+if(OperatingSystem.IsWindows())TestProcessSafety.SetErrorMode(3);
 int passed=0;
 void Require(bool condition,string label) { if(!condition) throw new Exception(label); Console.WriteLine("PASS "+label); passed++; }
 Require(new Metric("","",null,"°C").Display(true)=="—","Unavailable values remain unavailable");
@@ -12,7 +13,7 @@ var prefs=new Preferences { Monitor="DISPLAY-TEST",ColumnWidth=310,Columns=2,Opa
 prefs.Save(); var loaded=Preferences.Load();
 Require(loaded.Monitor=="DISPLAY-TEST" && loaded.Columns==2 && loaded.Pins.Contains("gpu/test") && loaded.HiddenDevices.Contains("volume/test"),"Settings survive restart");
 File.WriteAllText(Preferences.Path,"{\"ColumnWidth\":-1,\"Columns\":99,\"Opacity\":0,\"Interval\":-100}"); loaded=Preferences.Load();
-Require(loaded.ColumnWidth>=240 && loaded.Columns<=4 && loaded.Opacity==0 && loaded.Interval>=500,"Invalid settings cannot break layout or polling");
+Require(loaded.ColumnWidth>=200 && loaded.Columns<=4 && loaded.Opacity==0 && loaded.Interval>=500,"Invalid settings cannot break layout or polling");
 File.WriteAllText(Preferences.Path,"{broken");
 Require(Preferences.Load().Columns==1,"Corrupt configuration recovers to defaults");
 Require(DesignCatalog.All.Count>=12 && DesignCatalog.All.Select(d=>d.Key).Distinct().Count()==DesignCatalog.All.Count,"Design choices are uniquely addressable");
@@ -76,3 +77,15 @@ Require(DesignCatalog.ColorOr("#a1b2c3","#000000")=="#A1B2C3"&&DesignCatalog.Col
 Require(DesignCatalog.Resolve(new Preferences{Theme="Graphite"})==DesignCatalog.Get("Graphite"),"Without customizations the original theme stays identical");
 File.WriteAllText(Preferences.Path,"{\"GraphColors\":null,\"GraphScale\":999}");var repairedColors=Preferences.Load();Require(repairedColors.GraphColors.Count==0&&repairedColors.GraphScale==1.6,"Malformed customization settings cannot break chart geometry");
 Console.WriteLine($"{passed} total checks passed");
+
+var netPrefs=new Preferences();string adapter="network/test";Require(!netPrefs.IsMetricVisible(adapter,adapter+"/internal-ip")&&!netPrefs.IsMetricVisible(adapter,adapter+"/external-ip"),"IP address display is optional and off by default");netPrefs.SetMetricVisible(adapter,adapter+"/internal-ip",true);netPrefs.NetworkAddresses[adapter]=new("192.0.2.10","203.0.113.20",DateTimeOffset.UtcNow,DateTimeOffset.UtcNow);netPrefs.ColumnWidth=200;netPrefs.FontScale=.65;netPrefs.Save();var savedNet=Preferences.Load();Require(savedNet.NetworkAddresses[adapter].ExternalIP=="203.0.113.20"&&savedNet.IsMetricVisible(adapter,adapter+"/internal-ip")&&savedNet.ColumnWidth==200&&savedNet.FontScale==.65,"Addresses, visibility and smaller widget sizes survive restart");
+var addressSnapshot=new Snapshot(new(){new(adapter,"Network","Test adapter",new(){new(adapter+"rx","Download",1,"MB/s")})},new(),new(),DateTime.Now);var addressMetrics=PinPlacement.Compose(addressSnapshot,savedNet)[0].Metrics;Require(addressMetrics.Count==3&&addressMetrics.Last().Display(false)=="203.0.113.20","Network composition displays saved IP text without a live lookup");
+var slowHandler=new AddressHandler{Slow=true};using var slowClient=new System.Net.Http.HttpClient(slowHandler);var timedLookup=new NetworkAddressLookup(slowClient,_=>"192.0.2.12",TimeSpan.FromMilliseconds(40));var timeoutResult=await timedLookup.FetchAsync(adapter,savedNet.NetworkAddresses[adapter],true);Require(timeoutResult.ExternalFailed&&timeoutResult.State.ExternalIP=="203.0.113.20","A timed-out IP request ends without removing the saved address");
+var fakeHandler=new AddressHandler();using var fakeClient=new System.Net.Http.HttpClient(fakeHandler);var lookup=new NetworkAddressLookup(fakeClient,_=>"192.0.2.11");Require(fakeHandler.Calls==0,"Creating the IP lookup helper sends no request");var localOnly=await lookup.FetchAsync(adapter,savedNet.NetworkAddresses[adapter],false);Require(fakeHandler.Calls==0&&localOnly.State.InternalIP=="192.0.2.11"&&localOnly.State.ExternalIP=="203.0.113.20","Local-only refresh sends no public IP request and preserves the saved external IP");var manual=await lookup.FetchAsync(adapter,localOnly.State,true);Require(fakeHandler.Calls==1&&manual.State.ExternalIP=="203.0.113.99"&&!manual.ExternalFailed,"One explicit external refresh sends exactly one request");fakeHandler.Fail=true;var failed=await lookup.FetchAsync(adapter,manual.State,true);Require(failed.ExternalFailed&&failed.State.ExternalIP==manual.State.ExternalIP&&failed.State.ExternalUpdated==manual.State.ExternalUpdated,"Network failure preserves the previous external address and timestamp");fakeHandler.Fail=false;fakeHandler.Reply=new string('x',200);var malformed=await lookup.FetchAsync(adapter,manual.State,true);Require(malformed.ExternalFailed&&malformed.State.ExternalIP==manual.State.ExternalIP,"Oversized or malformed public IP responses cannot overwrite stored values");fakeHandler.Reply="2001:db8:abcd:1234:ffff:ffff:ffff:abcd";var ipv6=await lookup.FetchAsync(adapter,manual.State,true);Require(ipv6.State.ExternalIP==fakeHandler.Reply,"IPv6 text is supported without numeric formatting");using var cancellation=new CancellationTokenSource();cancellation.Cancel();try{await lookup.FetchAsync(adapter,manual.State,true,cancellation.Token);Require(false,"Canceled lookup must not run");}catch(OperationCanceledException){Require(true,"Closing or cancellation prevents further IP work");}
+Console.WriteLine($"{passed} total checks passed");
+sealed class AddressHandler:System.Net.Http.HttpMessageHandler{
+ public int Calls;public bool Fail;public bool Slow;public string Reply="203.0.113.99";
+ protected override async Task<System.Net.Http.HttpResponseMessage> SendAsync(System.Net.Http.HttpRequestMessage request,CancellationToken cancellation){Calls++;if(Slow)await Task.Delay(1000,cancellation);if(request.RequestUri?.Host!="api64.ipify.org")throw new Exception("Unexpected IP endpoint");if(Fail)throw new System.Net.Http.HttpRequestException("Offline");return new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.OK){Content=new System.Net.Http.StringContent(Reply)};}
+}
+
+static class TestProcessSafety{[System.Runtime.InteropServices.DllImport("kernel32.dll")]internal static extern uint SetErrorMode(uint mode);}

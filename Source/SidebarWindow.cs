@@ -124,6 +124,7 @@ public sealed class SidebarWindow : Window
     public void OpenSettings()
     {
         if (settings == null) { settings = new SettingsWindow(this); settings.Closed += (_,_) => settings = null; }
+        if (settings.WindowState == WindowState.Minimized) settings.WindowState = WindowState.Normal;
         settings.Show(); settings.Activate();
     }
     private void HideToTray() { dock.Release(); Hide(); }

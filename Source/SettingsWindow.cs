@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -271,9 +271,6 @@ public sealed class SettingsWindow : Window
         var device=PinPlacement.Compose(sidebar.Latest,P).FirstOrDefault(d=>d.Id==selectedDeviceId);if(device==null)return;deviceDetails.Children.Clear();int start=page.Children.Count;
         var title=Ui.Text(device.Name,15);title.FontWeight=FontWeights.SemiBold;title.TextWrapping=TextWrapping.Wrap;title.Margin=new Thickness(0,0,0,8);page.Children.Add(title);
         var enabledControl=Check("Gerät anzeigen",!P.HiddenDevices.Contains(device.Id)&&!P.HiddenCategories.Contains(device.Category),enabled=>{Toggle(P.HiddenDevices,device.Id,!enabled);if(enabled)P.HiddenCategories.RemoveAll(s=>s==device.Category);});System.Windows.Automation.AutomationProperties.SetAutomationId(enabledControl,"DeviceVisible:"+device.Id);
-        Label("Sichtbare Werte");
-        var own=P.Pins.Where(id=>(PinPlacement.Target(sidebar.Latest,P,id)?.Id??"custom")==device.Id).Distinct().ToHashSet();
-        MetricChecks(device with{Metrics=device.Metrics.Where(m=>!own.Contains(m.Id)).ToList()});
         if(device.Category=="Network"){
             var refresh=Ui.Button(addressBusy?"IP-Adressen werden abgerufen …":"IP-Adressen abrufen / aktualisieren",()=>{});refresh.IsEnabled=!addressBusy;System.Windows.Automation.AutomationProperties.SetAutomationId(refresh,"RefreshNetworkAddresses");
             refresh.Click+=async(_,_)=>{
@@ -285,6 +282,9 @@ public sealed class SettingsWindow : Window
             };
             page.Children.Add(refresh);Note("IP-Adressen werden nur per Button abgerufen und gespeichert. Keine automatische Aktualisierung.");Note("Externe IP: api64.ipify.org über die Standardroute, nicht zwingend über den ausgewählten Adapter.");
         }
+        Label("Sichtbare Werte");
+        var own=P.Pins.Where(id=>(PinPlacement.Target(sidebar.Latest,P,id)?.Id??"custom")==device.Id).Distinct().ToHashSet();
+        MetricChecks(device with{Metrics=device.Metrics.Where(m=>!own.Contains(m.Id)).ToList()});
         Label("Eigene Sensoren");
         if(own.Count==0)Note("Keine eigenen Sensoren hinzugefügt.");
         foreach(string id in own)

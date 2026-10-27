@@ -453,7 +453,7 @@ public sealed class SettingsWindow : Window
         if(current == "System")
         {
             bool admin = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
-            diagnostics.Text = $"Sidebar by NemeSIS 2.11 · .NET {Environment.Version}\nZugriff: {(admin ? "Administrator" : "Standardbenutzer")}\n"+ScheduledAutostart.Describe()+"\n"+
+            diagnostics.Text = $"Sidebar by NemeSIS {typeof(App).Assembly.GetName().Version?.ToString(3)} · .NET {Environment.Version}\nZugriff: {(admin ? "Administrator" : "Standardbenutzer")}\n"+ScheduledAutostart.Describe()+"\n"+
                 (snapshot == null ? "Sensoren werden initialisiert …" : $"{snapshot.Devices.Count} Geräte · {snapshot.Sensors.Count} Messwerte · {snapshot.Time:HH:mm:ss}\n"+string.Join("\n",snapshot.Warnings));
             SettingsText.Apply(this,P.SettingsLanguage);
         }

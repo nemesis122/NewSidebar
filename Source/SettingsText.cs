@@ -48,6 +48,8 @@ public static class SettingsText
  private sealed class ChoiceConverter:IValueConverter
  {public object Convert(object value,Type target,object parameter,CultureInfo culture)=>Translate(value?.ToString()??"",CurrentLanguage);public object ConvertBack(object value,Type target,object parameter,CultureInfo culture)=>Binding.DoNothing;}
  private const string Data="""
+Mehrspaltig: Daten größer und verteilt|Multiple columns: larger, spaced readings|Plusieurs colonnes : valeurs agrandies et espacées|Più colonne: valori più grandi e distribuiti|Varias columnas: valores más grandes y distribuidos|Várias colunas: valores maiores e distribuídos
+Zusätzliche Darstellung ab 2 Spalten. Bei 1 Spalte bleibt das Layout unverändert.|Additional presentation for 2 or more columns. One column keeps the existing layout.|Présentation supplémentaire à partir de 2 colonnes. Une colonne conserve la présentation existante.|Presentazione aggiuntiva da 2 colonne. Una colonna mantiene il layout esistente.|Presentación adicional a partir de 2 columnas. Una columna mantiene el diseño existente.|Apresentação adicional a partir de 2 colunas. Uma coluna mantém o layout existente.
 Einstellungen|Settings|Paramètres|Impostazioni|Configuración|Definições
 Übersicht|Overview|Vue d’ensemble|Panoramica|Resumen|Visão geral
 Position & Größe|Position & size|Position et taille|Posizione e dimensioni|Posición y tamaño|Posição e tamanho

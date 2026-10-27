@@ -14,6 +14,16 @@ public static class CardLayouts
  public static CardLayout Get(string? key)=>All.FirstOrDefault(l=>l.Key==key)??All[0];
  public static string BaseLayout(string? key){string value=Get(key).Key;return value.EndsWith(".Large",StringComparison.Ordinal)?value[..^6]:value;}
  public static double ReadingMultiplier(string? key)=>Get(key).Key.EndsWith(".Large",StringComparison.Ordinal)?1.35:1;
+ public static double SpaceMultiplier(Preferences prefs)=>prefs.ExpandMultiColumnReadings&&prefs.Columns>1?1.2:1;
+ public static void PositionInstrument(Grid content,FrameworkElement? instrument,FrameworkElement readings,Preferences prefs)
+ {
+  if(instrument!=null)System.Windows.Automation.AutomationProperties.SetAutomationId(instrument,"CardInstrument");
+  if(SpaceMultiplier(prefs)==1)return;
+  content.ColumnDefinitions.Clear();content.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star)});
+  content.RowDefinitions.Add(new(){Height=GridLength.Auto});content.RowDefinitions.Add(new(){Height=new GridLength(1,GridUnitType.Star)});
+  Grid.SetColumn(readings,0);Grid.SetRow(readings,1);readings.VerticalAlignment=VerticalAlignment.Stretch;
+  if(instrument!=null){Grid.SetColumn(instrument,0);Grid.SetRow(instrument,0);instrument.HorizontalAlignment=HorizontalAlignment.Center;instrument.VerticalAlignment=VerticalAlignment.Top;instrument.Margin=new Thickness(0,0,0,8);}
+ }
  public static Metric? MainMetric(Device device)=>device.Category=="Network"?device.Metrics.FirstOrDefault(m=>m.Unit!="IP"):device.Metrics.FirstOrDefault(m=>m.Unit=="°C" && m.Label.StartsWith("Temperatur",StringComparison.OrdinalIgnoreCase))??device.Metrics.FirstOrDefault(m=>m.Unit=="°C")??device.Metrics.FirstOrDefault();
  public static IHardwareCard Create(Device d,Preferences p)
  {
@@ -37,10 +47,10 @@ public sealed class AlternateHardwareCard:Border,IHardwareCard
  private readonly System.Windows.Shapes.Path arc=new(){StrokeThickness=6,StrokeStartLineCap=PenLineCap.Round,StrokeEndLineCap=PenLineCap.Round};
  public AlternateHardwareCard(Device device,Preferences prefs)
  {
-  preferences=prefs;design=DesignCatalog.Resolve(prefs);accent=DesignCatalog.CategoryColor(design,device.Category,prefs);layout=CardLayouts.BaseLayout(prefs.Layout);scale=prefs.FontScale;readingScale=scale*CardLayouts.ReadingMultiplier(prefs.Layout);
+  preferences=prefs;design=DesignCatalog.Resolve(prefs);accent=DesignCatalog.CategoryColor(design,device.Category,prefs);layout=CardLayouts.BaseLayout(prefs.Layout);scale=prefs.FontScale;readingScale=scale*CardLayouts.ReadingMultiplier(prefs.Layout)*CardLayouts.SpaceMultiplier(prefs);
   CornerRadius=new(layout is "Text" or "Compact"?0:design.Radius);BorderThickness=layout=="Text"?new Thickness(0,0,0,1):new Thickness(1);
   Padding=new Thickness(layout is "Text" or "Compact"?9:13);Margin=new Thickness(3,0,3,layout=="Compact"?5:10);SetResourceReference(BackgroundProperty,"Panel");SetResourceReference(BorderBrushProperty,"Edge");
-  var body=new StackPanel();Child=body;var header=new StackPanel{Orientation=Orientation.Horizontal,Margin=new Thickness(0,0,0,4)};header.Children.Add(Ui.HardwareIcon(device.Category,15*scale));var title=Ui.SidebarText(device.Category,13*scale);title.FontWeight=FontWeights.SemiBold;header.Children.Add(title);body.Children.Add(header);
+  var body=new ExpandedReadingsPanel(prefs,2);Child=body;var header=new StackPanel{Orientation=Orientation.Horizontal,Margin=new Thickness(0,0,0,4)};header.Children.Add(Ui.HardwareIcon(device.Category,15*scale));var title=Ui.SidebarText(device.Category,13*scale);title.FontWeight=FontWeights.SemiBold;header.Children.Add(title);body.Children.Add(header);
   var name=Ui.HardwareTitle(device.Name,10*scale);name.TextTrimming=TextTrimming.CharacterEllipsis;name.ToolTip=Ui.HardwareName(device.Name);name.Margin=new Thickness(0,0,0,layout=="Compact"?4:10);body.Children.Add(name);
   if(layout=="Gauges" && device.Metrics.Count>0)Gauge(body,device);
   else if(layout=="Dashboard" && device.Metrics.Count>0 && CardLayouts.MainMetric(device)!=null)Dashboard(body,device);

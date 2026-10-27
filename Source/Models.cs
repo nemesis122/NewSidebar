@@ -11,6 +11,7 @@ public sealed class Preferences
     public string Side { get; set; } = "Rechts";
     public double ColumnWidth { get; set; } = 290;
     public int Columns { get; set; } = 1;
+    public bool ExpandMultiColumnReadings { get; set; }
     public bool Topmost { get; set; } = false;
     public bool ReserveSpace { get; set; }
     public double Opacity { get; set; } = 1;
@@ -52,7 +53,7 @@ public sealed class Preferences
             var p = JsonSerializer.Deserialize<Preferences>(json) ?? new();
             using var document=JsonDocument.Parse(json);
             if(!document.RootElement.TryGetProperty("Layout",out _))p.Layout=p.Theme switch {"Original"=>"Original","Compact" or "Terminal"=>"Compact","Minimal"=>"Text",_=>"Modern"};
-            p.ColumnWidth = Math.Clamp(p.ColumnWidth, 200, 440);
+            p.ColumnWidth = double.IsFinite(p.ColumnWidth)?Math.Clamp(p.ColumnWidth, 50, 440):290;
             p.Columns = Math.Clamp(p.Columns, 1, 4);
             p.Opacity = Math.Clamp(p.Opacity, 0, 1);
             p.Interval = Math.Clamp(p.Interval, 500, 10000);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -140,7 +140,7 @@ public sealed class SettingsWindow : Window
                 Select("Bildschirmseite", new[]{"Rechts","Links"},P.Side,s=>P.Side=s);
                 });
                 Card("Größe & Anordnung",()=> {
-                Slider("Breite pro Spalte (px)",200,440,P.ColumnWidth,10,"0",v=>P.ColumnWidth=v);
+                Slider("Breite pro Spalte (px)",50,440,P.ColumnWidth,10,"0",v=>P.ColumnWidth=v);
                 Select("Karten nebeneinander",new[]{1,2,3,4},P.Columns,v=>P.Columns=v);
                 Check("Alle Karten auf eine Ansicht einpassen",P.Fit,v=>P.Fit=v);
                 Note("Einpassen aus: Karten behalten ihre Größe und lassen sich scrollen.");
@@ -157,6 +157,8 @@ public sealed class SettingsWindow : Window
                 Card("Schrift & Anzeige",()=> {
                 Slider("Schriftgröße (%)",65,140,P.FontScale*100,5,"0",v=>P.FontScale=v/100);
                 Slider("Widget-Hintergrund (%)",0,100,P.Opacity*100,5,"0",v=>P.Opacity=v/100);
+                var expandReadings=Check("Mehrspaltig: Daten größer und verteilt",P.ExpandMultiColumnReadings,v=>P.ExpandMultiColumnReadings=v);System.Windows.Automation.AutomationProperties.SetAutomationId(expandReadings,"ExpandMultiColumnReadings");
+                Note("Zusätzliche Darstellung ab 2 Spalten. Bei 1 Spalte bleibt das Layout unverändert.");
                 Select("Temperatureinheit",new[]{"°C","°F"},P.Fahrenheit?"°F":"°C",v=>P.Fahrenheit=v=="°F");
                 });
                 break;
@@ -403,7 +405,7 @@ public sealed class SettingsWindow : Window
         if(current == "System")
         {
             bool admin = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
-            diagnostics.Text = $"Sidebar by NemeSIS 2.9 · .NET {Environment.Version}\nZugriff: {(admin ? "Administrator" : "Standardbenutzer")}\n"+ScheduledAutostart.Describe()+"\n"+
+            diagnostics.Text = $"Sidebar by NemeSIS 2.10 · .NET {Environment.Version}\nZugriff: {(admin ? "Administrator" : "Standardbenutzer")}\n"+ScheduledAutostart.Describe()+"\n"+
                 (snapshot == null ? "Sensoren werden initialisiert …" : $"{snapshot.Devices.Count} Geräte · {snapshot.Sensors.Count} Messwerte · {snapshot.Time:HH:mm:ss}\n"+string.Join("\n",snapshot.Warnings));
             SettingsText.Apply(this,P.SettingsLanguage);
         }

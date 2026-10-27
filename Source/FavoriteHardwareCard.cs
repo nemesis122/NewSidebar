@@ -16,12 +16,12 @@ public sealed class FavoriteHardwareCard:Border,IHardwareCard
  private readonly Meter meter;
  public FavoriteHardwareCard(Device device,Preferences prefs)
  {
-  design=DesignCatalog.Resolve(prefs);string layout=CardLayouts.BaseLayout(prefs.Layout),accent=DesignCatalog.CategoryColor(design,device.Category,prefs);double scale=prefs.FontScale,readingScale=scale*CardLayouts.ReadingMultiplier(prefs.Layout);
+  design=DesignCatalog.Resolve(prefs);string layout=CardLayouts.BaseLayout(prefs.Layout),accent=DesignCatalog.CategoryColor(design,device.Category,prefs);double scale=prefs.FontScale,readingScale=scale*CardLayouts.ReadingMultiplier(prefs.Layout)*CardLayouts.SpaceMultiplier(prefs);
   CornerRadius=new(layout=="Rackmount"?0:layout=="SideRail"?3:design.Radius);BorderThickness=new(layout=="SideRail"?3:1,1,1,1);Margin=new(3,0,3,design.Gap);Padding=new(11,10,11,10);SetResourceReference(BackgroundProperty,"Panel");BorderBrush=Ui.Brush(layout=="SideRail"?accent:design.Edge);
-  var body=new StackPanel();Child=body;var header=new StackPanel{Orientation=Orientation.Horizontal};header.Children.Add(Ui.HardwareIcon(device.Category,14*scale));var title=Ui.SidebarText(device.Category,12*scale);title.FontWeight=FontWeights.SemiBold;header.Children.Add(title);body.Children.Add(header);
+  var body=new ExpandedReadingsPanel(prefs,2);Child=body;var header=new StackPanel{Orientation=Orientation.Horizontal};header.Children.Add(Ui.HardwareIcon(device.Category,14*scale));var title=Ui.SidebarText(device.Category,12*scale);title.FontWeight=FontWeights.SemiBold;header.Children.Add(title);body.Children.Add(header);
   var name=Ui.HardwareTitle(device.Name,10*scale);name.TextTrimming=TextTrimming.CharacterEllipsis;name.Margin=new(0,4,0,10);body.Children.Add(name);
   var content=new Grid();content.ColumnDefinitions.Add(new(){Width=new GridLength(layout=="Panorama"?140:112)});content.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star)});body.Children.Add(content);
-  var instrument=new StackPanel{Width=layout=="Panorama"?130:102,HorizontalAlignment=HorizontalAlignment.Left};content.Children.Add(instrument);
+  var instrument=new StackPanel{VerticalAlignment=CardLayouts.SpaceMultiplier(prefs)>1?VerticalAlignment.Center:VerticalAlignment.Stretch,Width=layout=="Panorama"?130:102,HorizontalAlignment=HorizontalAlignment.Left};content.Children.Add(instrument);
   number=Ui.Text("—",(layout=="Digital"?26:24)*scale);number.FontWeight=FontWeights.SemiBold;number.FontFamily=new("Cascadia Mono, Consolas");number.Foreground=Ui.ValueBrush(prefs,accent);number.TextTrimming=TextTrimming.CharacterEllipsis;number.HorizontalAlignment=HorizontalAlignment.Center;
   System.Windows.Automation.AutomationProperties.SetAutomationId(number,"PrimaryMetric");
   unit=Ui.Text("",10*scale,"Muted");unit.HorizontalAlignment=HorizontalAlignment.Center;unit.Margin=new(0,4,0,0);
@@ -34,9 +34,10 @@ public sealed class FavoriteHardwareCard:Border,IHardwareCard
   instrument.Children.Add(screen);
   meter=new Meter(accent,design.Track,DesignCatalog.GraphSize(prefs),layout){Height=(layout=="Bitfield"?25:layout=="Rackmount"?22:layout=="DotMatrix"?38:layout=="Console"?15:6)*DesignCatalog.GraphSize(prefs),Margin=new(2,9,2,0)};instrument.Children.Add(meter);
   if(layout=="Tape"){instrument.Children.Clear();var tape=new Grid{Height=104};tape.ColumnDefinitions.Add(new(){Width=new GridLength(22)});tape.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star)});meter.Height=96;meter.Margin=new(0,0,5,0);meter.VerticalAlignment=VerticalAlignment.Center;screen.VerticalAlignment=VerticalAlignment.Center;Grid.SetColumn(screen,1);tape.Children.Add(meter);tape.Children.Add(screen);instrument.Children.Add(tape);}
-  var values=new StackPanel();Grid.SetColumn(values,1);content.Children.Add(values);
+  var values=new ExpandedReadingsPanel(prefs);Grid.SetColumn(values,1);content.Children.Add(values);
   foreach(var metric in device.Metrics){var label=Ui.SidebarText(metric.Label,10*readingScale,"Muted");var value=Ui.Text("—",11*readingScale);value.Foreground=Ui.ValueBrush(prefs,design.Text);value.FontFamily=new("Cascadia Mono, Consolas");value.TextTrimming=TextTrimming.CharacterEllipsis;if(metric.Unit=="IP"){value.TextWrapping=TextWrapping.Wrap;value.TextTrimming=TextTrimming.None;}readings[metric.Id]=value;values.Children.Add(new RadialHardwareCard.ReadoutPanel(label,value,11*readingScale){Margin=new(0,1,0,2)});}
   primaryId=CardLayouts.MainMetric(device)?.Id;if(primaryId==null){instrument.Visibility=Visibility.Collapsed;content.ColumnDefinitions[0].Width=new GridLength(0);}
+  CardLayouts.PositionInstrument(content,instrument,values,prefs);
  }
  public void Update(Device device,Preferences prefs)
  {

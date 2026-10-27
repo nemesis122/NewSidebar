@@ -19,22 +19,23 @@ public sealed class RadialHardwareCard:Border,IHardwareCard
   design=DesignCatalog.Resolve(prefs);string accent=DesignCatalog.CategoryColor(design,device.Category,prefs);string layout=CardLayouts.BaseLayout(prefs.Layout);
   CornerRadius=new CornerRadius(design.Radius);BorderThickness=new Thickness(1);Padding=new Thickness(11,9,11,9);Margin=new Thickness(3,0,3,design.Gap);
   SetResourceReference(BackgroundProperty,"Panel");SetResourceReference(BorderBrushProperty,"Edge");
-  var body=new StackPanel();Child=body;var header=new StackPanel{Orientation=Orientation.Horizontal};header.Children.Add(Ui.HardwareIcon(device.Category,14*prefs.FontScale));var title=Ui.SidebarText(device.Category,12*prefs.FontScale);title.FontWeight=FontWeights.SemiBold;header.Children.Add(title);body.Children.Add(header);
+  var body=new ExpandedReadingsPanel(prefs,2);Child=body;var header=new StackPanel{Orientation=Orientation.Horizontal};header.Children.Add(Ui.HardwareIcon(device.Category,14*prefs.FontScale));var title=Ui.SidebarText(device.Category,12*prefs.FontScale);title.FontWeight=FontWeights.SemiBold;header.Children.Add(title);body.Children.Add(header);
   var name=Ui.HardwareTitle(device.Name,10*prefs.FontScale);name.TextTrimming=TextTrimming.CharacterEllipsis;name.ToolTip=Ui.HardwareName(device.Name);name.Margin=new Thickness(0,3,0,7);body.Children.Add(name);
   var content=new Grid();content.ColumnDefinitions.Add(new(){Width=new GridLength(112)});content.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star)});body.Children.Add(content);
-  var primary=CardLayouts.MainMetric(device);
+  var primary=CardLayouts.MainMetric(device);StackPanel? instrument=null;
   if(primary!=null)
   {
    var secondary=layout!="TwinRings"?null:device.Category=="Network"?device.Metrics.FirstOrDefault(m=>m.Label=="Upload"):device.Metrics.FirstOrDefault(m=>m.Id!=primary.Id&&m.Label=="Auslastung")??device.Metrics.FirstOrDefault(m=>m.Id!=primary.Id&&m.Unit=="%")??device.Metrics.FirstOrDefault(m=>m.Id!=primary.Id);
    double size=layout=="Gauges"?96:layout=="ArcGauge"?108:104;
    dial=new Dial(primary.Id,size,layout=="ArcGauge",prefs.FontScale,accent,design.Track,design.Edge,layout=="OrbitGauge",secondary?.Id,layout,prefs);
    System.Windows.Automation.AutomationProperties.SetAutomationId(dial.Number,"PrimaryMetric");
-   var instrument=new StackPanel{HorizontalAlignment=HorizontalAlignment.Left,VerticalAlignment=VerticalAlignment.Top,Margin=new Thickness(0,0,8,0)};instrument.Children.Add(dial.View);
+   instrument=new StackPanel{HorizontalAlignment=HorizontalAlignment.Left,VerticalAlignment=CardLayouts.SpaceMultiplier(prefs)>1?VerticalAlignment.Center:VerticalAlignment.Top,Margin=new Thickness(0,0,8,0)};instrument.Children.Add(dial.View);
    content.Children.Add(instrument);
   }
   if(primary==null)content.ColumnDefinitions[0].Width=new GridLength(0);
-  var values=new StackPanel{VerticalAlignment=VerticalAlignment.Top};System.Windows.Automation.AutomationProperties.SetAutomationId(values,"GaugeReadings");Grid.SetColumn(values,1);content.Children.Add(values);
-  foreach(var metric in device.Metrics){var row=new Readout(metric,prefs.FontScale*CardLayouts.ReadingMultiplier(prefs.Layout),prefs,design.Text);readings[metric.Id]=row;values.Children.Add(row.View);}
+  var values=new ExpandedReadingsPanel(prefs){VerticalAlignment=CardLayouts.SpaceMultiplier(prefs)>1?VerticalAlignment.Stretch:VerticalAlignment.Top};System.Windows.Automation.AutomationProperties.SetAutomationId(values,"GaugeReadings");Grid.SetColumn(values,1);content.Children.Add(values);
+  foreach(var metric in device.Metrics){var row=new Readout(metric,prefs.FontScale*CardLayouts.ReadingMultiplier(prefs.Layout)*CardLayouts.SpaceMultiplier(prefs),prefs,design.Text);readings[metric.Id]=row;values.Children.Add(row.View);}
+  CardLayouts.PositionInstrument(content,instrument,values,prefs);
  }
  public void Update(Device device,Preferences prefs)
  {

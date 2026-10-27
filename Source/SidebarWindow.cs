@@ -24,6 +24,7 @@ public sealed class SidebarWindow : Window
     private readonly Dictionary<string, IHardwareCard> views = new();
     private string shape = "";
     private SettingsWindow? settings;
+    private Button? hideButton;
     private bool placing, exiting;
     public SidebarWindow()
     {
@@ -42,6 +43,7 @@ public sealed class SidebarWindow : Window
         var actions = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
         var gear = Ui.Button("⚙", OpenSettings); gear.ToolTip = "Settings"; gear.SetResourceReference(BackgroundProperty,"Chrome"); System.Windows.Automation.AutomationProperties.SetAutomationId(gear,"OpenSettings"); gear.Padding = new Thickness(6,2,6,2);
         var hide = Ui.Button("−", HideToTray); hide.ToolTip = "Hide to tray"; hide.SetResourceReference(BackgroundProperty,"Chrome"); hide.Padding = new Thickness(6,2,6,2); hide.Margin = new Thickness(5,0,0,0);
+        hideButton=hide;
         actions.Children.Add(gear); actions.Children.Add(hide); Grid.SetColumn(actions, 1); header.Children.Add(actions); root.Children.Add(header);
         Grid.SetRow(scroll,1); root.Children.Add(scroll);
         Content = root;
@@ -89,8 +91,9 @@ public sealed class SidebarWindow : Window
     }
     private void ResizeCards()
     {
+        if(hideButton!=null)hideButton.Visibility=ActualWidth<75?Visibility.Collapsed:Visibility.Visible;
         double availableHeight=Math.Max(100,root.ActualHeight>0?root.ActualHeight-root.RowDefinitions[0].ActualHeight:ActualHeight-28);
-        scroll.Configure(Prefs.Fit,Math.Max(160,ActualWidth-4),availableHeight,Prefs.Columns>1);
+        scroll.Configure(Prefs.Fit,Math.Max(1,ActualWidth-4),availableHeight,Prefs.Columns>1,Prefs.ColumnWidth<200?200*Prefs.Columns:0);
     }
     private void OnSnapshot(Snapshot snapshot)
     {
@@ -172,7 +175,7 @@ public sealed class HardwareCard : Border,IHardwareCard
     public HardwareCard(Device device, Preferences prefs)
     {
         design=DesignCatalog.Resolve(prefs);
-        double readingScale=prefs.FontScale*CardLayouts.ReadingMultiplier(prefs.Layout);
+        double readingScale=prefs.FontScale*CardLayouts.ReadingMultiplier(prefs.Layout)*CardLayouts.SpaceMultiplier(prefs);
         bool original=CardLayouts.BaseLayout(prefs.Layout)=="Original", compact=design.Layout is "Compact" or "Terminal";
         isOriginal=original;
         color = DesignCatalog.CategoryColor(design,device.Category,prefs);
@@ -181,7 +184,7 @@ public sealed class HardwareCard : Border,IHardwareCard
         BorderThickness = design.Layout=="Minimal" ? new Thickness(0,0,0,1) : design.Layout=="Neon" ? new Thickness(3,1,1,1) : new Thickness(1);
         Padding = new Thickness(design.Padding,compact?7:original?10:11,design.Padding,compact?7:10); Margin = new Thickness(3,0,3,design.Gap);
         SetResourceReference(BackgroundProperty,"Panel"); SetResourceReference(BorderBrushProperty,"Edge");
-        var stack = new StackPanel(); Child = stack;
+        var stack = new ExpandedReadingsPanel(prefs,2); Child = stack;
         var head = new Grid();head.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star)});head.ColumnDefinitions.Add(new(){Width=GridLength.Auto});
         bool stackedHero=device.Category=="Network" && !original;
         if(stackedHero){head.RowDefinitions.Add(new(){Height=GridLength.Auto});head.RowDefinitions.Add(new(){Height=GridLength.Auto});}

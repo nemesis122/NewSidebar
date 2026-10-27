@@ -2,11 +2,12 @@
 
 A native, portable Windows hardware sidebar for CPU, RAM, GPU, drives and network.
 
-## Custom hardware names and fonts
+## New in v2.12.0: custom hardware names and fonts
 
 - In **Settings → Devices & readings**, select a device and enter a **Hardware name**. Choose **Apply** or press Enter to save. Leave it blank or choose **Restore original name** to reset it. Names are saved per device ID and do not change sensor detection.
 - In **Settings → Appearance & text**, choose **Font family (all text)** to change the sidebar, readings, instruments and settings. **Default (design)** restores the original typography. Install additional fonts in Windows and restart the sidebar to make them available.
 - Both preferences persist in `aurora-settings.json`.
+- System information shows the version of the running assembly, avoiding stale version labels.
 
 ## Download
 
@@ -15,7 +16,7 @@ A native, portable Windows hardware sidebar for CPU, RAM, GPU, drives and networ
 Windows 10/11 x64. Run the EXE from a writable folder. The .NET runtime is bundled;
 settings are stored in `aurora-settings.json` beside the EXE.
 
-## New in v2.11.0
+## Included from v2.11.0
 
 - **Settings → Text sizes**: independently adjust widget titles, hardware names,
   labels, readings, instrument numbers and instrument units from 50% to 200%.
@@ -118,3 +119,4 @@ including additional 1440p/4K layout checks at 100/150/200 percent DPI.
 Software layout tests do not constitute physical validation of all hardware models.
 
 See `THIRD-PARTY-NOTICES.txt` and `Licenses/` for dependency notices.
+

@@ -16,11 +16,11 @@ public sealed class RadialHardwareCard:Border,IHardwareCard
  private Dial? dial;
  public RadialHardwareCard(Device device,Preferences prefs)
  {
-  design=DesignCatalog.Resolve(prefs);string accent=DesignCatalog.CategoryColor(design,device.Category,prefs);string layout=CardLayouts.BaseLayout(prefs.Layout);
+  design=DesignCatalog.Resolve(prefs);string accent=DesignCatalog.CategoryColor(design,device.Category,prefs);string layout=CardLayouts.BaseLayout(prefs.Layout);double textScale=prefs.FontScale*CardLayouts.ReadingMultiplier(prefs.Layout)*CardLayouts.SpaceMultiplier(prefs);
   CornerRadius=new CornerRadius(design.Radius);BorderThickness=new Thickness(1);Padding=new Thickness(11,9,11,9);Margin=new Thickness(3,0,3,design.Gap);
   SetResourceReference(BackgroundProperty,"Panel");SetResourceReference(BorderBrushProperty,"Edge");
-  var body=new ExpandedReadingsPanel(prefs,2);Child=body;var header=new StackPanel{Orientation=Orientation.Horizontal};header.Children.Add(Ui.HardwareIcon(device.Category,14*prefs.FontScale));var title=Ui.SidebarText(device.Category,12*prefs.FontScale);title.FontWeight=FontWeights.SemiBold;header.Children.Add(title);body.Children.Add(header);
-  var name=Ui.HardwareTitle(device.Name,10*prefs.FontScale);name.TextTrimming=TextTrimming.CharacterEllipsis;name.ToolTip=Ui.HardwareName(device.Name);name.Margin=new Thickness(0,3,0,7);body.Children.Add(name);
+  var body=new ExpandedReadingsPanel(prefs,2);Child=body;var header=new StackPanel{Orientation=Orientation.Horizontal};header.Children.Add(Ui.HardwareIcon(device.Category,14*textScale*Preferences.TextFactor(prefs.TitleTextScale)));var title=Ui.SidebarText(device.Category,12*textScale*Preferences.TextFactor(prefs.TitleTextScale));title.FontWeight=FontWeights.SemiBold;header.Children.Add(title);body.Children.Add(prefs.TitleTextScale==1?header:new Viewbox{Stretch=Stretch.Uniform,StretchDirection=StretchDirection.DownOnly,HorizontalAlignment=HorizontalAlignment.Left,Child=header});
+  var name=Ui.HardwareTitle(device.Name,11*textScale*Preferences.TextFactor(prefs.HardwareTextScale));name.TextTrimming=TextTrimming.None;name.TextWrapping=TextWrapping.Wrap;name.ToolTip=Ui.HardwareName(device.Name);name.Margin=new Thickness(0,3,0,7);body.Children.Add(name);
   var content=new Grid();content.ColumnDefinitions.Add(new(){Width=new GridLength(112)});content.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star)});body.Children.Add(content);
   var primary=CardLayouts.MainMetric(device);StackPanel? instrument=null;
   if(primary!=null)
@@ -49,8 +49,8 @@ public sealed class RadialHardwareCard:Border,IHardwareCard
   private readonly TextBlock value;
   public Readout(Metric metric,double scale,Preferences prefs,string textColor)
   {
-   var label=Ui.SidebarText(metric.Label,10*scale,"Muted");label.ToolTip=Ui.SidebarFullLabel(metric.Label);value=Ui.Text("—",11*scale);value.Foreground=Ui.ValueBrush(prefs,textColor);value.FontFamily=new FontFamily("Cascadia Mono, Consolas");value.TextTrimming=TextTrimming.CharacterEllipsis;if(metric.Unit=="IP"){value.TextWrapping=TextWrapping.Wrap;value.TextTrimming=TextTrimming.None;}
-   View=new ReadoutPanel(label,value,11*scale){Margin=new Thickness(0,1,0,2)};
+   var label=Ui.SidebarText(metric.Label,10*scale*Preferences.TextFactor(prefs.LabelTextScale),"Muted");label.ToolTip=Ui.SidebarFullLabel(metric.Label);value=Ui.Text("—",11*scale*Preferences.TextFactor(prefs.ValueTextScale));value.Foreground=Ui.ValueBrush(prefs,textColor);value.FontFamily=new FontFamily("Cascadia Mono, Consolas");value.TextTrimming=TextTrimming.CharacterEllipsis;if(metric.Unit=="IP"){value.TextWrapping=TextWrapping.Wrap;value.TextTrimming=TextTrimming.None;}
+   View=new ReadoutPanel(label,value,11*scale*Preferences.TextFactor(prefs.ValueTextScale)){Margin=new Thickness(0,1,0,2)};
   }
   public void Update(Metric metric,Preferences prefs){value.Text=metric.Display(prefs.Fahrenheit);value.ToolTip=Ui.SidebarFullLabel(metric.Label)+" · "+value.Text+(metric.Source==null?"":"\n"+metric.Source);}
  }
@@ -107,8 +107,9 @@ public sealed class RadialHardwareCard:Border,IHardwareCard
    if(ticks)for(int i=0;i<12;i++){double angle=i*Math.PI/6;View.Children.Add(new Line{X1=size/2+(radius-10)*Math.Cos(angle),Y1=centerY+(radius-10)*Math.Sin(angle),X2=size/2+(radius-6)*Math.Cos(angle),Y2=centerY+(radius-6)*Math.Sin(angle),Stroke=Ui.Brush(edge),StrokeThickness=1});}
    var center=new StackPanel{HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,Width=size-22,Margin=half?new Thickness(0,19,0,0):new Thickness(0)};
    if(style=="ColumnGauge"){center.Width=size-30;center.Margin=new Thickness(24,0,0,0);}
-   Number=Ui.Text("—",(secondaryId!=null||size<100?18:20)*scale);Number.Foreground=Ui.ValueBrush(prefs,accent);Number.FontFamily=new FontFamily("Cascadia Mono, Consolas");Number.FontWeight=FontWeights.SemiBold;Number.HorizontalAlignment=HorizontalAlignment.Center;Number.TextTrimming=TextTrimming.CharacterEllipsis;Number.MaxWidth=size-22;
-   unit=Ui.Text("",9*scale,"Muted");unit.HorizontalAlignment=HorizontalAlignment.Center;unit.Margin=new Thickness(0,2,0,0);center.Children.Add(Number);center.Children.Add(unit);View.Children.Add(center);
+   Number=Ui.Text("—",(secondaryId!=null||size<100?18:20)*scale*Preferences.TextFactor(prefs.InstrumentTextScale));Number.Foreground=Ui.ValueBrush(prefs,accent);Number.FontFamily=new FontFamily("Cascadia Mono, Consolas");Number.FontWeight=FontWeights.SemiBold;Number.HorizontalAlignment=HorizontalAlignment.Center;Number.TextTrimming=TextTrimming.CharacterEllipsis;Number.MaxWidth=size-22;
+   unit=Ui.Text("",9*scale*Preferences.TextFactor(prefs.UnitTextScale),"Muted");unit.HorizontalAlignment=HorizontalAlignment.Center;unit.Margin=new Thickness(0,2,0,0);center.Children.Add(Number);center.Children.Add(unit);
+   if(prefs.InstrumentTextScale!=1||prefs.UnitTextScale!=1){var margin=center.Margin;center.Margin=new Thickness(0);center.Width=double.NaN;Number.MaxWidth=double.PositiveInfinity;Number.TextTrimming=TextTrimming.None;View.Children.Add(new Viewbox{Width=size-22,Height=half?size*.44:size*.7,Margin=margin,Stretch=Stretch.Uniform,StretchDirection=StretchDirection.DownOnly,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,Child=center});}else View.Children.Add(center);
   }
   private double Ratio(Metric? metric)=>metric?.Value is double value&&double.IsFinite(value)?Math.Clamp(value/Math.Max(1,metric.Maximum),0,.999999):0;
   public void Update(Metric metric,Metric? secondary,Preferences prefs)

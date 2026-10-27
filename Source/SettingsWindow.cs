@@ -46,13 +46,14 @@ public sealed class SettingsWindow : Window
         CompactStyle(typeof(Slider),new Setter(MarginProperty,new Thickness(0,2,0,2)));
         SetResourceReference(BackgroundProperty,"Back"); SetResourceReference(ForegroundProperty,"Text");
         Title = "Sidebar by NemeSIS · Einstellungen"; Width = 860; Height = 650; MinWidth = 800; MinHeight = 560;
+        ShowInTaskbar=false;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         var layout = new Grid();layout.SetResourceReference(Panel.BackgroundProperty,"Back"); layout.ColumnDefinitions.Add(new() { Width = new GridLength(195) }); layout.ColumnDefinitions.Add(new() { Width = new GridLength(1,GridUnitType.Star) });
         var left = new DockPanel(); left.SetResourceReference(Panel.BackgroundProperty,"Panel");
         var logo = new StackPanel { Margin = new Thickness(23,20,12,10) };
         logo.Children.Add(Ui.Text("Sidebar by NemeSIS",15,"Accent")); logo.Children.Add(Ui.Text("DEIN SYSTEM. IM BLICK.",9,"Muted")); DockPanel.SetDock(logo,Dock.Top); left.Children.Add(logo);
         var badge = Ui.Text("Änderungen werden automatisch gespeichert.",11,"Muted");badge.TextWrapping=TextWrapping.Wrap; badge.Margin = new Thickness(23,12,18,14); DockPanel.SetDock(badge,Dock.Bottom); left.Children.Add(badge);
-        foreach(var entry in new[]{("Position","Position & Größe"),("Darstellung","Design & Schrift"),("Farben","Text & Diagramme"),("Geräte","Geräte & Werte"),("Karten","Karten & Reihenfolge"),("Grenzen","Warngrenzen"),("Voraussetzungen","Einrichtung"),("System","Systeminfo")})nav.Items.Add(new ListBoxItem{Tag=entry.Item1,Content=entry.Item2,Padding=new Thickness(13,8,10,8),Margin=new Thickness(0,1,0,1)});
+        foreach(var entry in new[]{("Position","Position & Größe"),("Darstellung","Design & Schrift"),("Textgrößen","Textgrößen"),("Farben","Text & Diagramme"),("Geräte","Geräte & Werte"),("Karten","Karten & Reihenfolge"),("Grenzen","Warngrenzen"),("Voraussetzungen","Einrichtung"),("System","Systeminfo")})nav.Items.Add(new ListBoxItem{Tag=entry.Item1,Content=entry.Item2,Padding=new Thickness(13,8,10,8),Margin=new Thickness(0,1,0,1)});
         var languagePanel=new StackPanel{Margin=new Thickness(12,12,12,12)};languagePanel.Children.Add(Ui.Text("Sprache",11,"Muted"));
         var languages=new ComboBox{ItemsSource=SettingsText.Languages,SelectedItem=SettingsText.Languages.FirstOrDefault(l=>l.Key==P.SettingsLanguage)??SettingsText.Languages[0],MinWidth=150};languagePanel.Children.Add(languages);System.Windows.Automation.AutomationProperties.SetAutomationId(languages,"SettingsLanguage");
         languages.SelectionChanged+=(_,_)=>{if(languages.SelectedItem is SettingsLanguage choice){P.SettingsLanguage=choice.Key;SettingsText.CurrentLanguage=choice.Key;P.Save();Navigate(current);}};DockPanel.SetDock(languagePanel,Dock.Bottom);left.Children.Add(languagePanel);
@@ -97,7 +98,9 @@ public sealed class SettingsWindow : Window
     {
         var t = Ui.Text(value.ToString(format),12);t.HorizontalAlignment=HorizontalAlignment.Right;t.VerticalAlignment=VerticalAlignment.Center;
         var s = new Slider { Minimum = min, Maximum = max, Value = value, TickFrequency = tick, IsSnapToTickEnabled = true, VerticalAlignment=VerticalAlignment.Center };
+        if(label=="Grafikgröße (%)"){System.Windows.Automation.AutomationProperties.SetAutomationId(s,"WholeGraphicSize");s.ToolTip=SettingsText.Translate("Skaliert die ganze Grafik mit Zahl und Einheit. Bei wenig Platz wird die Größe passend begrenzt.",P.SettingsLanguage);}
         var controls=new Grid();controls.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star)});controls.ColumnDefinitions.Add(new(){Width=new GridLength(54)});controls.Children.Add(s);Grid.SetColumn(t,1);controls.Children.Add(t);
+        if(label=="Schriftgröße (%)"){controls.ColumnDefinitions.Add(new(){Width=GridLength.Auto});var resetText=Ui.Button("↺",()=>{P.FontScale=P.TitleTextScale=P.HardwareTextScale=P.LabelTextScale=P.ValueTextScale=P.InstrumentTextScale=P.UnitTextScale=1;sidebar.Apply();Navigate("Darstellung");});resetText.Padding=new Thickness(4,1,4,1);resetText.Margin=new Thickness(5,0,0,0);resetText.ToolTip="Schriftgröße zurücksetzen (100 %)";System.Windows.Automation.AutomationProperties.SetAutomationId(resetText,"ResetTextSize");Grid.SetColumn(resetText,2);controls.Children.Add(resetText);}
         s.ValueChanged += (_,_) => { t.Text = s.Value.ToString(format); change(s.Value); sidebar.Apply(); }; SettingRow(label,controls);
     }
     private void SettingRow(string label,FrameworkElement control)
@@ -156,11 +159,25 @@ public sealed class SettingsWindow : Window
                 Card("Darstellung",()=>{LayoutPicker();DesignPicker();});
                 Card("Schrift & Anzeige",()=> {
                 Slider("Schriftgröße (%)",65,140,P.FontScale*100,5,"0",v=>P.FontScale=v/100);
+                Slider("Grafikgröße (%)",50,200,P.InstrumentScale*100,5,"0",v=>P.InstrumentScale=v/100);
                 Slider("Widget-Hintergrund (%)",0,100,P.Opacity*100,5,"0",v=>P.Opacity=v/100);
-                var expandReadings=Check("Mehrspaltig: Daten größer und verteilt",P.ExpandMultiColumnReadings,v=>P.ExpandMultiColumnReadings=v);System.Windows.Automation.AutomationProperties.SetAutomationId(expandReadings,"ExpandMultiColumnReadings");
-                Note("Zusätzliche Darstellung ab 2 Spalten. Bei 1 Spalte bleibt das Layout unverändert.");
+                var expandReadings=Check("Text unter dem Graphen",P.ExpandMultiColumnReadings,v=>P.ExpandMultiColumnReadings=v);System.Windows.Automation.AutomationProperties.SetAutomationId(expandReadings,"ExpandMultiColumnReadings");
+                expandReadings.IsEnabled=P.Columns>1;expandReadings.ToolTip=SettingsText.Translate("Benötigt mindestens 2 Spalten.",P.SettingsLanguage);ToolTipService.SetShowOnDisabled(expandReadings,true);
+                Note("Ab 2 Spalten: Graph oben, Werte unten. Eine Spalte bleibt unverändert.");
                 Select("Temperatureinheit",new[]{"°C","°F"},P.Fahrenheit?"°F":"°C",v=>P.Fahrenheit=v=="°F");
                 });
+                break;
+            case "Textgrößen":
+                Heading("Textgrößen","Die Einzelgrößen wirken zusätzlich zur allgemeinen Schriftgröße. 100 % entspricht dem gewählten Design.");
+                Card("Textgrößen einzeln (%)",()=>{
+                Slider("Widget-Titel",50,200,P.TitleTextScale*100,5,"0",v=>P.TitleTextScale=v/100);
+                Slider("Hardware-Namen",50,200,P.HardwareTextScale*100,5,"0",v=>P.HardwareTextScale=v/100);
+                Slider("Bezeichnungen",50,200,P.LabelTextScale*100,5,"0",v=>P.LabelTextScale=v/100);
+                Slider("Messwerte",50,200,P.ValueTextScale*100,5,"0",v=>P.ValueTextScale=v/100);
+                Slider("Instrument-Zahlen",50,200,P.InstrumentTextScale*100,5,"0",v=>P.InstrumentTextScale=v/100);
+                Slider("Instrument-Einheiten",50,200,P.UnitTextScale*100,5,"0",v=>P.UnitTextScale=v/100);
+                });
+                var resetSizes=Ui.Button("Textgrößen zurücksetzen",()=>{P.FontScale=P.TitleTextScale=P.HardwareTextScale=P.LabelTextScale=P.ValueTextScale=P.InstrumentTextScale=P.UnitTextScale=1;sidebar.Apply();Navigate("Textgrößen");});System.Windows.Automation.AutomationProperties.SetAutomationId(resetSizes,"ResetIndividualTextSizes");page.Children.Add(resetSizes);
                 break;
             case "Farben":
                 Heading("Text & Diagramme","Textfarben sowie Farben und Stärke der Balken und Instrumente anpassen.");
@@ -405,7 +422,7 @@ public sealed class SettingsWindow : Window
         if(current == "System")
         {
             bool admin = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
-            diagnostics.Text = $"Sidebar by NemeSIS 2.10 · .NET {Environment.Version}\nZugriff: {(admin ? "Administrator" : "Standardbenutzer")}\n"+ScheduledAutostart.Describe()+"\n"+
+            diagnostics.Text = $"Sidebar by NemeSIS 2.11 · .NET {Environment.Version}\nZugriff: {(admin ? "Administrator" : "Standardbenutzer")}\n"+ScheduledAutostart.Describe()+"\n"+
                 (snapshot == null ? "Sensoren werden initialisiert …" : $"{snapshot.Devices.Count} Geräte · {snapshot.Sensors.Count} Messwerte · {snapshot.Time:HH:mm:ss}\n"+string.Join("\n",snapshot.Warnings));
             SettingsText.Apply(this,P.SettingsLanguage);
         }

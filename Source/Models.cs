@@ -12,6 +12,14 @@ public sealed class Preferences
     public double ColumnWidth { get; set; } = 290;
     public int Columns { get; set; } = 1;
     public bool ExpandMultiColumnReadings { get; set; }
+    public double TitleTextScale { get; set; } = 1;
+    public double HardwareTextScale { get; set; } = 1;
+    public double LabelTextScale { get; set; } = 1;
+    public double ValueTextScale { get; set; } = 1;
+    public double InstrumentTextScale { get; set; } = 1;
+    public double UnitTextScale { get; set; } = 1;
+    public double InstrumentScale { get; set; } = 1;
+    public static double TextFactor(double value)=>double.IsFinite(value)?Math.Clamp(value,.5,2):1;
     public bool Topmost { get; set; } = false;
     public bool ReserveSpace { get; set; }
     public double Opacity { get; set; } = 1;
@@ -58,6 +66,8 @@ public sealed class Preferences
             p.Opacity = Math.Clamp(p.Opacity, 0, 1);
             p.Interval = Math.Clamp(p.Interval, 500, 10000);
             p.FontScale = Math.Clamp(p.FontScale, .65, 1.4);
+            p.TitleTextScale=TextFactor(p.TitleTextScale);p.HardwareTextScale=TextFactor(p.HardwareTextScale);p.LabelTextScale=TextFactor(p.LabelTextScale);p.ValueTextScale=TextFactor(p.ValueTextScale);p.InstrumentTextScale=TextFactor(p.InstrumentTextScale);p.UnitTextScale=TextFactor(p.UnitTextScale);
+            p.InstrumentScale=TextFactor(p.InstrumentScale);
             p.GraphScale = double.IsFinite(p.GraphScale)?Math.Clamp(p.GraphScale,.5,1.6):1; p.GraphColors ??= new();
             p.NetworkAddresses ??= new();p.VisibleNetworkAddresses ??= new();
             p.HiddenCategories ??= new(); p.HiddenDevices ??= new(); p.Pins ??= new(); p.PinTargets ??= new(); p.CpuTemperatureSources ??= new(); p.HiddenMetrics ??= new();

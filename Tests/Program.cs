@@ -13,7 +13,7 @@ var prefs=new Preferences { Monitor="DISPLAY-TEST",ColumnWidth=310,Columns=2,Opa
 prefs.Save(); var loaded=Preferences.Load();
 Require(loaded.Monitor=="DISPLAY-TEST" && loaded.Columns==2 && loaded.Pins.Contains("gpu/test") && loaded.HiddenDevices.Contains("volume/test"),"Settings survive restart");
 File.WriteAllText(Preferences.Path,"{\"ColumnWidth\":-1,\"Columns\":99,\"Opacity\":0,\"Interval\":-100}"); loaded=Preferences.Load();
-Require(loaded.ColumnWidth>=200 && loaded.Columns<=4 && loaded.Opacity==0 && loaded.Interval>=500,"Invalid settings cannot break layout or polling");
+Require(loaded.ColumnWidth>=50 && loaded.Columns<=4 && loaded.Opacity==0 && loaded.Interval>=500,"Invalid settings cannot break layout or polling");
 File.WriteAllText(Preferences.Path,"{broken");
 Require(Preferences.Load().Columns==1,"Corrupt configuration recovers to defaults");
 Require(DesignCatalog.All.Count>=12 && DesignCatalog.All.Select(d=>d.Key).Distinct().Count()==DesignCatalog.All.Count,"Design choices are uniquely addressable");
@@ -78,6 +78,7 @@ Require(DesignCatalog.Resolve(new Preferences{Theme="Graphite"})==DesignCatalog.
 File.WriteAllText(Preferences.Path,"{\"GraphColors\":null,\"GraphScale\":999}");var repairedColors=Preferences.Load();Require(repairedColors.GraphColors.Count==0&&repairedColors.GraphScale==1.6,"Malformed customization settings cannot break chart geometry");
 Console.WriteLine($"{passed} total checks passed");
 
+var narrowPrefs=new Preferences{ColumnWidth=50};narrowPrefs.Save();Require(Preferences.Load().ColumnWidth==50,"50 pixel column width survives restart");
 var netPrefs=new Preferences();string adapter="network/test";Require(!netPrefs.IsMetricVisible(adapter,adapter+"/internal-ip")&&!netPrefs.IsMetricVisible(adapter,adapter+"/external-ip"),"IP address display is optional and off by default");netPrefs.SetMetricVisible(adapter,adapter+"/internal-ip",true);netPrefs.NetworkAddresses[adapter]=new("192.0.2.10","203.0.113.20",DateTimeOffset.UtcNow,DateTimeOffset.UtcNow);netPrefs.ColumnWidth=200;netPrefs.FontScale=.65;netPrefs.Save();var savedNet=Preferences.Load();Require(savedNet.NetworkAddresses[adapter].ExternalIP=="203.0.113.20"&&savedNet.IsMetricVisible(adapter,adapter+"/internal-ip")&&savedNet.ColumnWidth==200&&savedNet.FontScale==.65,"Addresses, visibility and smaller widget sizes survive restart");
 var addressSnapshot=new Snapshot(new(){new(adapter,"Network","Test adapter",new(){new(adapter+"rx","Download",1,"MB/s")})},new(),new(),DateTime.Now);var addressMetrics=PinPlacement.Compose(addressSnapshot,savedNet)[0].Metrics;Require(addressMetrics.Count==3&&addressMetrics.Last().Display(false)=="203.0.113.20","Network composition displays saved IP text without a live lookup");
 var slowHandler=new AddressHandler{Slow=true};using var slowClient=new System.Net.Http.HttpClient(slowHandler);var timedLookup=new NetworkAddressLookup(slowClient,_=>"192.0.2.12",TimeSpan.FromMilliseconds(40));var timeoutResult=await timedLookup.FetchAsync(adapter,savedNet.NetworkAddresses[adapter],true);Require(timeoutResult.ExternalFailed&&timeoutResult.State.ExternalIP=="203.0.113.20","A timed-out IP request ends without removing the saved address");

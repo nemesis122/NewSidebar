@@ -244,6 +244,9 @@ Ziel-Widget auswählen. Häkchen hinzufügen oder entfernen.|Choose a target wid
 Status prüfen und fehlende Komponenten gezielt einrichten. Es wird nichts automatisch installiert.|Check status and configure missing components. Nothing installs automatically.|Vérifiez l’état et configurez les composants manquants. Aucune installation automatique.|Controlla lo stato e configura i componenti mancanti. Nessuna installazione automatica.|Comprueba el estado y configura componentes faltantes. Sin instalación automática.|Verifique o estado e configure os componentes em falta. Sem instalação automática.
 Häkchen = in Eigene Werte hinzugefügt. Zum Entfernen Häkchen ausschalten.|Checked = custom reading added. Uncheck to remove.|Coché = mesure ajoutée. Décochez pour supprimer.|Selezionato = valore aggiunto. Deseleziona per rimuovere.|Marcado = valor añadido. Desmarca para eliminar.|Selecionado = valor adicionado. Desmarque para remover.
 Sensoren werden initialisiert …|Initializing sensors …|Initialisation des capteurs…|Inizializzazione sensori…|Inicializando sensores…|A iniciar sensores…
+Gestartete EXE|Running EXE|EXE en cours|EXE in esecuzione|EXE en ejecución|EXE em execução
+Autostart-Datei|Startup EXE|EXE au démarrage|EXE di avvio|EXE de inicio|EXE de arranque
+Autostart verweist auf eine andere EXE.|Startup points to another EXE.|Le démarrage pointe vers un autre EXE.|L’avvio punta a un altro EXE.|El inicio apunta a otro EXE.|O arranque aponta para outro EXE.
 Datei|File|Fichier|File|Archivo|Ficheiro
 aktiv|enabled|activé|attivo|activado|ativado
 deaktiviert|disabled|désactivé|disattivo|desactivado|desativado

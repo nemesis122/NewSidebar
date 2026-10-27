@@ -14,6 +14,21 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        try { Start(e); }
+        catch(Exception error)
+        {
+            string report=$"{DateTimeOffset.Now:O}\nVersion: {typeof(App).Assembly.GetName().Version}\nEXE: {Environment.ProcessPath}\n{error}\n";
+            string? saved=null;
+            foreach(string path in new[]{Path.Combine(AppContext.BaseDirectory,"startup-error.log"),Path.Combine(Path.GetTempPath(),"NemeSIS-startup-error.log")})
+            {
+                try { File.AppendAllText(path,report);saved=path;break; } catch { }
+            }
+            MessageBox.Show("Sidebar could not start.\n\n"+error.Message+(saved==null?"":"\n\nDiagnostic log: "+saved),"Sidebar by NemeSIS",MessageBoxButton.OK,MessageBoxImage.Error);
+            Shutdown(1);
+        }
+    }
+    private void Start(StartupEventArgs e)
+    {
         if(e.Args.Contains("--configure-sensor-access"))
         {
             try{if(!SensorAccess.IsAdministrator)ScheduledAutostart.RequestAccess();else{ScheduledAutostart.ConfigureAccess();MessageBox.Show("Sensorzugriff eingerichtet. Bitte die Sidebar anschließend neu starten.","Sidebar by NemeSIS");}}
@@ -57,11 +72,36 @@ public partial class App : Application
                 probeService.Stop(); Dispatcher.BeginInvoke(new Action(Shutdown));
             }; probeService.Start(); return;
         }
+        if(e.Args.Contains("--repair-startup-location"))
+        {
+            try { ScheduledAutostart.RelocateToCurrentExecutable(); }
+            catch(Exception error)
+            {
+                MessageBox.Show("The startup location could not be updated. The selected copy will still open.\n\n"+error.Message,"Sidebar by NemeSIS",MessageBoxButton.OK,MessageBoxImage.Warning);
+            }
+        }
+        else if(ScheduledAutostart.NeedsRelocation)
+        {
+            try
+            {
+                bool elevated=SensorAccess.IsAdministrator;
+                ScheduledAutostart.RequestRelocation();
+                if(!elevated) { Shutdown();return; }
+            }
+            catch(System.ComponentModel.Win32Exception error) when(error.NativeErrorCode==1223)
+            {
+                // A declined UAC request must not prevent the manually selected portable copy from opening.
+            }
+            catch(Exception error)
+            {
+                MessageBox.Show("The startup location could not be updated. This copy will start without changing the existing task.\n\n"+error.Message,"Sidebar by NemeSIS",MessageBoxButton.OK,MessageBoxImage.Warning);
+            }
+        }
         if(!SensorAccess.IsAdministrator && ScheduledAutostart.Available)
         {
             try
             {
-                using var existing=EventWaitHandle.OpenExisting("Local\\AuroraSidebar-Show");
+                using var existing=EventWaitHandle.OpenExisting(StartupIdentity.ShowEventName(Environment.ProcessPath!));
                 existing.Set(); Shutdown(); return;
             }
             catch(WaitHandleCannotBeOpenedException) { }
@@ -69,13 +109,13 @@ public partial class App : Application
             try { ScheduledAutostart.Run(); Shutdown(); return; }
             catch(Exception error) { File.WriteAllText(Path.Combine(AppContext.BaseDirectory,"autostart-launch-error.txt"),error.ToString()); }
         }
-        instance = new Mutex(true, "Local\\AuroraSidebar-2026", out bool created);
+        instance = new Mutex(true, StartupIdentity.MutexName(Environment.ProcessPath!), out bool created);
         if(!created && SensorAccess.IsAdministrator)
         {
             try { created=instance.WaitOne(5000); }
             catch(AbandonedMutexException) { created=true; }
         }
-        showRequest = new EventWaitHandle(false,EventResetMode.AutoReset,"Local\\AuroraSidebar-Show");
+        showRequest = new EventWaitHandle(false,EventResetMode.AutoReset,StartupIdentity.ShowEventName(Environment.ProcessPath!));
         if (!created) { showRequest.Set(); Shutdown(); return; }
         DispatcherUnhandledException += (_, args) => {
             try { File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "aurora-errors.log"), DateTime.Now + " " + args.Exception + Environment.NewLine); } catch { }

@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Security.Principal;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
@@ -8,17 +9,66 @@ namespace Aurora;
 public static class ScheduledAutostart
 {
     public const string TaskName="Sidebar by NemeSIS";
+    public static bool NeedsRelocation
+    {
+        get
+        {
+            try
+            {
+                dynamic task=Connect().GetFolder("\\").GetTask(TaskName);
+                return !StartupIdentity.SameExecutable((string)task.Definition.Actions.Item(1).Path,Environment.ProcessPath);
+            }
+            catch { return false; }
+        }
+    }
+    public static void RelocateToCurrentExecutable()
+    {
+        if(!SensorAccess.IsAdministrator) throw new InvalidOperationException("Die einmalige Einrichtung benötigt Administratorrechte.");
+        dynamic folder=Connect().GetFolder("\\");
+        dynamic task=folder.GetTask(TaskName);
+        if(IsCurrentExecutable(task)) return;
+        dynamic definition=task.Definition;
+        // Keep the existing on/off choice and logon trigger, changing only the executable location.
+        SetExecutableLocation(definition,Environment.ProcessPath!);
+        folder.RegisterTaskDefinition(TaskName,definition,6,WindowsIdentity.GetCurrent().Name,null,3,null);
+        if(!Available && (bool)definition.Settings.Enabled) throw new InvalidOperationException("Autostart-Pfad konnte nicht aktualisiert werden.");
+        // The repair process was launched manually, outside this task. Stop only instances
+        // of the old scheduled task after the new definition has been saved successfully.
+        if(task.GetInstances(0).Count>0) task.Stop(0);
+    }
+    public static void SetExecutableLocation(dynamic definition,string executable)
+    {
+        string fullPath=Path.GetFullPath(executable);
+        dynamic action=definition.Actions.Item(1);
+        action.Path=fullPath;
+        action.WorkingDirectory=Path.GetDirectoryName(fullPath)!;
+        action.Arguments="";
+    }
+    public static void RequestRelocation()
+    {
+        if(SensorAccess.IsAdministrator) { RelocateToCurrentExecutable();return; }
+        Process.Start(new ProcessStartInfo(Environment.ProcessPath!)
+        {
+            UseShellExecute=true,Verb="runas",
+            Arguments="--repair-startup-location --wait-for-exit "+Environment.ProcessId
+        });
+    }
     public static bool Enabled
     {
         get
         {
-            try { dynamic scheduler=Connect(); dynamic task=scheduler.GetFolder("\\").GetTask(TaskName); return (bool)task.Enabled && (bool)task.Definition.Triggers.Item(1).Enabled; }
+            try { dynamic scheduler=Connect(); dynamic task=scheduler.GetFolder("\\").GetTask(TaskName); return IsCurrentExecutable(task) && (bool)task.Enabled && (bool)task.Definition.Triggers.Item(1).Enabled; }
             catch { return false; }
         }
     }
     public static bool Available
     {
-        get { try { dynamic scheduler=Connect(); dynamic task=scheduler.GetFolder("\\").GetTask(TaskName); return (bool)task.Enabled; } catch { return false; } }
+        get { try { dynamic scheduler=Connect(); dynamic task=scheduler.GetFolder("\\").GetTask(TaskName); return IsCurrentExecutable(task) && (bool)task.Enabled; } catch { return false; } }
+    }
+    private static bool IsCurrentExecutable(dynamic task)
+    {
+        string target=task.Definition.Actions.Item(1).Path;
+        return StartupIdentity.MatchesTaskTarget(target,Environment.ProcessPath);
     }
     private static dynamic Connect()
     {
@@ -34,6 +84,7 @@ public static class ScheduledAutostart
             try
             {
                 dynamic task=folder.GetTask(TaskName); dynamic current=task.Definition;
+                if(!IsCurrentExecutable(task)) return;
                 foreach(dynamic existingTrigger in current.Triggers) existingTrigger.Enabled=false;
                 current.Settings.Enabled=true;
                 folder.RegisterTaskDefinition(TaskName,current,6,WindowsIdentity.GetCurrent().Name,null,3,null);
@@ -83,6 +134,7 @@ public static class ScheduledAutostart
     public static void Run()
     {
         dynamic scheduler=Connect(); dynamic task=scheduler.GetFolder("\\").GetTask(TaskName);
+        if(!IsCurrentExecutable(task)) throw new InvalidOperationException("Autostart verweist auf eine andere EXE.");
         task.Run(null);
     }
     public static string Describe()
@@ -90,7 +142,9 @@ public static class ScheduledAutostart
         try
         {
             dynamic scheduler=Connect(); dynamic task=scheduler.GetFolder("\\").GetTask(TaskName);
-            return $"Autostart: {(Enabled ? "aktiv" : "deaktiviert")} · Aufgabenplanung · erhöhte Sensorrechte\nDatei: {task.Definition.Actions.Item(1).Path}";
+            string target=task.Definition.Actions.Item(1).Path;
+            if(!IsCurrentExecutable(task)) return "Autostart verweist auf eine andere EXE.\nAutostart-Datei: "+target;
+            return $"Autostart: {(Enabled ? "aktiv" : "deaktiviert")} · Aufgabenplanung · erhöhte Sensorrechte\nAutostart-Datei: {target}";
         }
         catch { return "Autostart mit Sensorrechten ist noch nicht eingerichtet."; }
     }

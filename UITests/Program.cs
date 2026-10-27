@@ -254,6 +254,26 @@ internal static class Program
   Require(sidebar.Prefs.TextFontFamily=="Arial"&&Preferences.Load().TextFontFamily=="Arial"&&settings.FontFamily.Source=="Arial","Font selector applies to settings and persists immediately");
   settingsRoot.Measure(new Size(960,690));settingsRoot.Arrange(new Rect(0,0,960,690));settingsRoot.UpdateLayout();Save(settingsRoot,Path.Combine(folder,"Font-Family-Setting.png"));
   fontPicker.SelectedIndex=0;Require(sidebar.Prefs.TextFontFamily==""&&settings.FontFamily.Source=="Segoe UI","Default font option restores design typography");
+  foreach(var language in SettingsText.Languages)
+  {
+   sidebar.Prefs.SettingsLanguage=language.Key;navigate.Invoke(settings,new object[]{"System"});settings.Refresh(fakeSnapshot);Arrange(settingsRoot,960);
+   var diagnostic=(TextBlock)typeof(SettingsWindow).GetField("diagnostics",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)!.GetValue(settings)!;
+   Require(diagnostic.Text.Contains(SettingsText.Translate("Gestartete EXE",language.Key)+": "+Environment.ProcessPath),"System information shows the running EXE in "+language.Key);
+   Require(diagnostic.Text.Contains(typeof(Aurora.App).Assembly.GetName().Version!.ToString(3)),"System information shows the running assembly version in "+language.Key);
+  }
+  dynamic scheduler=Activator.CreateInstance(Type.GetTypeFromProgID("Schedule.Service")!)!;scheduler.Connect();
+  foreach(bool startupEnabled in new[]{true,false})
+  {
+   dynamic definition=scheduler.NewTask(0);definition.Settings.Enabled=true;
+   dynamic trigger=definition.Triggers.Create(9);trigger.Enabled=startupEnabled;trigger.Delay="PT5S";
+   dynamic action=definition.Actions.Create(0);action.Path=@"C:\Downloads\old-sidebar.exe";action.WorkingDirectory=@"C:\Downloads";action.Arguments="--old-argument";
+   string selected=Path.Combine(Path.GetTempPath(),"OEM sidebar with spaces","Sidebar.exe");
+   ScheduledAutostart.SetExecutableLocation(definition,selected);
+   Require((string)action.Path==Path.GetFullPath(selected),"Startup relocation uses the manually selected EXE");
+   Require((string)action.WorkingDirectory==Path.GetDirectoryName(Path.GetFullPath(selected)),"Startup working directory follows the EXE location");
+   Require((bool)trigger.Enabled==startupEnabled&&(string)trigger.Delay=="PT5S"&&(bool)definition.Settings.Enabled,"Relocation preserves the user's startup on/off choice and delay");
+   Require((string)action.Arguments=="","Relocation cannot inherit stale command-line options");
+  }
   settings.Close();sidebar.Close();
   int combinations=DesignCatalog.All.Count*CardLayouts.All.Count*4;Console.WriteLine($"{checks} native layout/scroll checks passed; {combinations} layout, color and width combinations rendered.");File.WriteAllText(Path.Combine(TestRoot,"UITests","LayoutQA-result.txt"),$"PASS: {checks} checks; {combinations} render combinations; widget pin assignment, CPU selector, layout picker and mouse wheel verified.");
  }

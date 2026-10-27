@@ -2,6 +2,12 @@
 
 A native, portable Windows hardware sidebar for CPU, RAM, GPU, drives and network.
 
+## Custom hardware names and fonts
+
+- In **Settings → Devices & readings**, select a device and enter a **Hardware name**. Choose **Apply** or press Enter to save. Leave it blank or choose **Restore original name** to reset it. Names are saved per device ID and do not change sensor detection.
+- In **Settings → Appearance & text**, choose **Font family (all text)** to change the sidebar, readings, instruments and settings. **Default (design)** restores the original typography. Install additional fonts in Windows and restart the sidebar to make them available.
+- Both preferences persist in `aurora-settings.json`.
+
 ## Download
 
 [Download the portable EXE](https://github.com/nemesis122/NewSidebar/releases/latest)

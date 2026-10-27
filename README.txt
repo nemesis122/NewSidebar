@@ -1,32 +1,40 @@
-Sidebar by NemeSIS v2.10.0
+Sidebar by NemeSIS v2.11.0
 
-WHAT IS NEW
-- Optional expanded presentation for all 48 layout variants, active only with
-  two or more columns. Reading labels and values are 20 percent larger.
-- Instrument layouts place the instrument above the readings. Values use the
-  full widget width below it. One-column layouts remain unchanged.
-- Enable the option in Settings > Appearance & text > Multiple columns:
-  larger, spaced readings. It is off by default for existing installations.
-- Width per column now supports 50 to 440 logical pixels. Very narrow widgets
-  scale uniformly to prevent horizontal overflow; the settings button remains
-  available at narrow widths.
-- Expanded presentation and width choices persist across application restarts.
+NEW IN THIS RELEASE
+- Six independent text size sliders, from 50 to 200 percent, on the new Text
+  sizes settings page: widget titles, hardware names, labels, readings,
+  instrument numbers and instrument units. The general text size still applies.
+- Widget titles and hardware names follow the selected text sizes. Long
+  hardware names wrap instead of being cut off.
+- Graphic size (%) is directly below Text size in Appearance & text. It scales
+  the whole instrument, including the number and unit, from 50 to 200 percent.
+  Available space limits enlargement in narrow widgets. Bar layouts also use
+  the graphic size setting. Text sizes remain separately adjustable.
+- The option for instruments above readings is now named Text below the graph
+  in English, with translations for all six supported settings languages.
+  It applies with 2 or more columns and is disabled with one column.
+- Text sizes can be reset to 100 percent. Choices are saved across restarts.
+- Notification-area icon only: sidebar and settings have no taskbar entry.
+  Right-click the notification-area icon to open Settings, show or exit.
+- Fixed clipped instrument digits when combining text and graphic scaling.
 
-PORTABLE USE
-Windows 10/11 x64. Run Sidebar-by-NemeSIS.exe from a writable folder.
-The .NET runtime is bundled. Settings are stored in aurora-settings.json beside
-this EXE. To keep your settings, replace your existing EXE in the same folder.
-Some hardware sensors require PawnIO and one-time administrator setup via the
-Setup page. Available readings depend on hardware, drivers and access rights.
+PORTABLE UPGRADE
+Windows 10/11 x64. Exit via the notification-area menu before replacing the
+existing EXE. Keep the EXE in the same writable folder to preserve the adjacent
+aurora-settings.json. No application installer or separate .NET installation
+is needed. Some sensors require PawnIO and one-time administrator setup.
 
-NETWORK IP ADDRESSES
-Internal and external IP addresses remain optional. Use the manual refresh
-button under Devices & readings. No automatic lookup runs on startup or a
-schedule. The external lookup uses api64.ipify.org and the Windows default
-internet route, which may differ from the selected adapter with VPNs.
+NETWORK ADDRESSES
+Internal and external IP displays remain optional. Addresses are fetched and
+saved only when the user presses the refresh button in Devices & readings.
+No automatic lookup runs on startup or a schedule. External lookup uses
+api64.ipify.org and the Windows default internet route.
 
-BUILD AND VALIDATION
-Requires the .NET 8 SDK on Windows. Run Build-Portable.ps1 from the source root.
-73 data checks, 23,039 native checks and 2,688 render combinations passed.
+VALIDATION
+78 data checks, 25,801 native checks and 2,688 render combinations passed.
+Checks cover independent text roles, persistence, reset, all 48 layouts,
+narrow widths, multiple columns, graphic scaling and notification-area mode.
+Sensor availability depends on hardware, motherboard, drivers and access rights.
 Software tests do not constitute physical validation of every hardware model.
+Build on Windows using the .NET 8 SDK and Build-Portable.ps1.
 See THIRD-PARTY-NOTICES.txt and Licenses/ for dependency notices.

@@ -33,6 +33,7 @@ public static class SettingsText
   void Visit(DependencyObject node)
   {
    if(!visited.Add(node))return;
+   if(node is FrameworkElement literal && System.Windows.Automation.AutomationProperties.GetAutomationId(literal) is "DeviceNamePreview" or "OriginalHardwareName")return;
    if(node is TextBlock text)Value(node,"Text",text.Text,v=>text.Text=v);
    if(node is ContentControl content&&content.Content is string caption)Value(node,"Content",caption,v=>content.Content=v);
    if(node is FrameworkElement element&&element.ToolTip is string tip)Value(node,"ToolTip",tip,v=>element.ToolTip=v);
@@ -48,6 +49,13 @@ public static class SettingsText
  private sealed class ChoiceConverter:IValueConverter
  {public object Convert(object value,Type target,object parameter,CultureInfo culture)=>Translate(value?.ToString()??"",CurrentLanguage);public object ConvertBack(object value,Type target,object parameter,CultureInfo culture)=>Binding.DoNothing;}
  private const string Data="""
+Schriftart (gesamter Text)|Font family (all text)|Police (tout le texte)|Carattere (tutto il testo)|Fuente (todo el texto)|Tipo de letra (todo o texto)
+Standard (Design)|Default (design)|Par défaut (style)|Predefinito (design)|Predeterminada (diseño)|Predefinido (design)
+Gilt für Sidebar und Einstellungen. Neue Schriften zuerst in Windows installieren und die Sidebar neu starten.|Applies to the sidebar and settings. Install new fonts in Windows first, then restart the sidebar.|S’applique à la barre et aux paramètres. Installez les nouvelles polices dans Windows, puis redémarrez la barre.|Si applica alla barra e alle impostazioni. Installa nuovi caratteri in Windows e riavvia la barra.|Se aplica a la barra y a los ajustes. Instala nuevas fuentes en Windows y reinicia la barra.|Aplica-se à barra e às definições. Instale novas fontes no Windows e reinicie a barra.
+Hardware-Name|Hardware name|Nom du matériel|Nome hardware|Nombre del hardware|Nome do hardware
+Leer lassen, um den Originalnamen zu verwenden. Mit Übernehmen oder Enter speichern.|Leave blank to use the original name. Save with Apply or Enter.|Laissez vide pour utiliser le nom d’origine. Enregistrez avec Appliquer ou Entrée.|Lascia vuoto per usare il nome originale. Salva con Applica o Invio.|Déjalo vacío para usar el nombre original. Guarda con Aplicar o Intro.|Deixe vazio para usar o nome original. Guarde com Aplicar ou Enter.
+Originalname wiederherstellen|Restore original name|Rétablir le nom d’origine|Ripristina nome originale|Restaurar nombre original|Restaurar nome original
+Übernehmen|Apply|Appliquer|Applica|Aplicar|Aplicar
 Grafikgröße (%)|Graphic size (%)|Taille du graphique (%)|Dimensione grafica (%)|Tamaño del gráfico (%)|Tamanho do gráfico (%)
 Gesamte Instrumentgröße (%)|Whole instrument size (%)|Taille complète de l’instrument (%)|Dimensione intero strumento (%)|Tamaño completo del instrumento (%)|Tamanho completo do instrumento (%)
 Skaliert die ganze Grafik mit Zahl und Einheit. Bei wenig Platz wird die Größe passend begrenzt.|Scales the whole graphic, including its number and unit. Size is limited to fit the available space.|Redimensionne le graphique entier, avec chiffre et unité. La taille est limitée à l’espace disponible.|Ridimensiona l’intera grafica, con numero e unità. La dimensione si adatta allo spazio disponibile.|Escala todo el gráfico, incluido el número y la unidad. El tamaño se limita al espacio disponible.|Redimensiona o gráfico inteiro, incluindo número e unidade. O tamanho é limitado ao espaço disponível.

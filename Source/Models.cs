@@ -7,6 +7,14 @@ namespace Aurora;
 
 public sealed class Preferences
 {
+    public Dictionary<string,string> HardwareNames { get; set; } = new();
+    public string TextFontFamily { get; set; } = "";
+    public string HardwareName(string deviceId,string originalName) => HardwareNames.TryGetValue(deviceId,out var name) && !string.IsNullOrWhiteSpace(name) ? name : originalName;
+    public void SetHardwareName(string deviceId,string? name)
+    {
+        if(string.IsNullOrWhiteSpace(name)) HardwareNames.Remove(deviceId);
+        else HardwareNames[deviceId]=name.Trim();
+    }
     public string Monitor { get; set; } = "";
     public string Side { get; set; } = "Rechts";
     public double ColumnWidth { get; set; } = 290;
@@ -59,6 +67,8 @@ public sealed class Preferences
         {
             var json=File.ReadAllText(Path);
             var p = JsonSerializer.Deserialize<Preferences>(json) ?? new();
+            p.HardwareNames ??= new();
+            p.TextFontFamily = p.TextFontFamily?.Trim() ?? "";
             using var document=JsonDocument.Parse(json);
             if(!document.RootElement.TryGetProperty("Layout",out _))p.Layout=p.Theme switch {"Original"=>"Original","Compact" or "Terminal"=>"Compact","Minimal"=>"Text",_=>"Modern"};
             p.ColumnWidth = double.IsFinite(p.ColumnWidth)?Math.Clamp(p.ColumnWidth, 50, 440):290;

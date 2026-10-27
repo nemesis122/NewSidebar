@@ -36,6 +36,7 @@ public sealed class SettingsWindow : Window
     public SettingsWindow(SidebarWindow sidebar,NetworkAddressLookup? networkLookup=null)
     {
         this.sidebar = sidebar;addressLookup=networkLookup??new NetworkAddressLookup();
+        SetResourceReference(FontFamilyProperty,"AppFont");
         Closed+=(_,_)=>addressCancellation.Cancel();
         SettingsText.CurrentLanguage=P.SettingsLanguage;
         foreach(var pair in new[]{("Back","#10141C"),("Panel","#181E29"),("Edge","#2B3544"),("Text","#ECF2FA"),("Muted","#AAB6C7"),("Accent","#6ACCEB")})Resources[pair.Item1]=Ui.Brush(pair.Item2);
@@ -158,12 +159,13 @@ public sealed class SettingsWindow : Window
                 Heading("Design & Schrift","Layout verändert den Aufbau. Das Farbschema bestimmt die Farben deiner Sidebar.");
                 Card("Darstellung",()=>{LayoutPicker();DesignPicker();});
                 Card("Schrift & Anzeige",()=> {
+                FontPicker();
                 Slider("Schriftgröße (%)",65,140,P.FontScale*100,5,"0",v=>P.FontScale=v/100);
                 Slider("Grafikgröße (%)",50,200,P.InstrumentScale*100,5,"0",v=>P.InstrumentScale=v/100);
                 Slider("Widget-Hintergrund (%)",0,100,P.Opacity*100,5,"0",v=>P.Opacity=v/100);
                 var expandReadings=Check("Text unter dem Graphen",P.ExpandMultiColumnReadings,v=>P.ExpandMultiColumnReadings=v);System.Windows.Automation.AutomationProperties.SetAutomationId(expandReadings,"ExpandMultiColumnReadings");
                 expandReadings.IsEnabled=P.Columns>1;expandReadings.ToolTip=SettingsText.Translate("Benötigt mindestens 2 Spalten.",P.SettingsLanguage);ToolTipService.SetShowOnDisabled(expandReadings,true);
-                Note("Ab 2 Spalten: Graph oben, Werte unten. Eine Spalte bleibt unverändert.");
+                expandReadings.ToolTip=SettingsText.Translate("Ab 2 Spalten: Graph oben, Werte unten. Eine Spalte bleibt unverändert.",P.SettingsLanguage);
                 Select("Temperatureinheit",new[]{"°C","°F"},P.Fahrenheit?"°F":"°C",v=>P.Fahrenheit=v=="°F");
                 });
                 break;
@@ -279,7 +281,7 @@ public sealed class SettingsWindow : Window
         var list=new ListBox{BorderThickness=new Thickness(1),MaxHeight=440,Margin=new Thickness(0,0,12,0),VerticalAlignment=VerticalAlignment.Top,HorizontalContentAlignment=HorizontalAlignment.Stretch};ScrollViewer.SetHorizontalScrollBarVisibility(list,ScrollBarVisibility.Disabled);list.SetResourceReference(BackgroundProperty,"Panel");list.SetResourceReference(BorderBrushProperty,"Edge");System.Windows.Automation.AutomationProperties.SetAutomationId(list,"DeviceList");
         var ordinal=new Dictionary<string,int>();
         foreach(var device in devices.OrderBy(d=>{int index=P.Order.IndexOf(d.Category);return index<0?99:index;}))
-        {ordinal.TryGetValue(device.Category,out int index);ordinal[device.Category]=index+1;string category=device.Category+(devices.Count(d=>d.Category==device.Category)>1?" "+(index+1):"");var label=Ui.Text(category+" · "+device.Name,12);label.TextTrimming=TextTrimming.CharacterEllipsis;list.Items.Add(new ListBoxItem{Tag=device.Id,Content=label,ToolTip=device.Name+"\n"+device.Id,HorizontalContentAlignment=HorizontalAlignment.Stretch,Padding=new Thickness(8,9,8,9)});}
+        {ordinal.TryGetValue(device.Category,out int index);ordinal[device.Category]=index+1;string category=device.Category+(devices.Count(d=>d.Category==device.Category)>1?" "+(index+1):"");var label=Ui.Text(category+" · "+P.HardwareName(device.Id,device.Name),12);label.TextTrimming=TextTrimming.CharacterEllipsis;list.Items.Add(new ListBoxItem{Tag=device.Id,Content=label,ToolTip=device.Name+"\n"+device.Id,HorizontalContentAlignment=HorizontalAlignment.Stretch,Padding=new Thickness(8,9,8,9)});}
         deviceDetails=new StackPanel();Grid.SetColumn(deviceDetails,1);grid.Children.Add(list);grid.Children.Add(deviceDetails);page.Children.Add(grid);
         list.SelectionChanged+=(_,_)=>{if(list.SelectedItem is ListBoxItem item){selectedDeviceId=(string)item.Tag;RenderDeviceDetails();}};
         list.SelectedItem=list.Items.OfType<ListBoxItem>().FirstOrDefault(i=>(string)i.Tag==selectedDeviceId)??list.Items.OfType<ListBoxItem>().FirstOrDefault();
@@ -288,7 +290,8 @@ public sealed class SettingsWindow : Window
     {
         if(deviceDetails==null||sidebar.Latest==null||selectedDeviceId==null)return;
         var device=PinPlacement.Compose(sidebar.Latest,P).FirstOrDefault(d=>d.Id==selectedDeviceId);if(device==null)return;deviceDetails.Children.Clear();int start=page.Children.Count;
-        var title=Ui.Text(device.Name,15);title.FontWeight=FontWeights.SemiBold;title.TextWrapping=TextWrapping.Wrap;title.Margin=new Thickness(0,0,0,8);page.Children.Add(title);
+        var title=Ui.Text(P.HardwareName(device.Id,device.Name),15);System.Windows.Automation.AutomationProperties.SetAutomationId(title,"DeviceNamePreview");title.FontWeight=FontWeights.SemiBold;title.TextWrapping=TextWrapping.Wrap;title.Margin=new Thickness(0,0,0,8);page.Children.Add(title);
+        HardwareNameEditor(device);
         var enabledControl=Check("Gerät anzeigen",!P.HiddenDevices.Contains(device.Id)&&!P.HiddenCategories.Contains(device.Category),enabled=>{Toggle(P.HiddenDevices,device.Id,!enabled);if(enabled)P.HiddenCategories.RemoveAll(s=>s==device.Category);});System.Windows.Automation.AutomationProperties.SetAutomationId(enabledControl,"DeviceVisible:"+device.Id);
         if(device.Category=="Network"){
             var refresh=Ui.Button(addressBusy?"IP-Adressen werden abgerufen …":"IP-Adressen abrufen / aktualisieren",()=>{});refresh.IsEnabled=!addressBusy;System.Windows.Automation.AutomationProperties.SetAutomationId(refresh,"RefreshNetworkAddresses");
@@ -362,7 +365,7 @@ public sealed class SettingsWindow : Window
         try
         {
             var choices=new List<SensorChoice>{new("","Automatisch · zum zugehörigen Widget"),new("custom","Separate Karte · Eigene Werte")};
-            if(sidebar.Latest!=null)choices.AddRange(sidebar.Latest.Devices.Select(d=>new SensorChoice(d.Id,d.Category+" · "+d.Name)));
+            if(sidebar.Latest!=null)choices.AddRange(sidebar.Latest.Devices.Select(d=>new SensorChoice(d.Id,d.Category+" · "+P.HardwareName(d.Id,d.Name))));
             string target="";if(sensorList.SelectedItem is SensorDisplay row)P.PinTargets.TryGetValue(row.Id,out target!);
             target??=pendingTarget??"";if(target.Length>0&&!choices.Any(c=>c.Id==target))choices.Add(new(target,"Widget derzeit nicht verfügbar · "+target));
             pinTarget.ItemsSource=choices;pinTarget.SelectedItem=choices.First(c=>c.Id==target);pinTarget.IsEnabled=sensorList.SelectedItem is SensorDisplay;
@@ -397,6 +400,34 @@ public sealed class SettingsWindow : Window
     private void DesignPicker()
     {
         Select("Farbschema",DesignCatalog.All,DesignCatalog.Get(P.Theme),design=>P.Theme=design.Key);
+    }
+    private void FontPicker()
+    {
+        var choices=new[]{""}.Concat(Ui.FontNames).Select(name=>new FontChoice(name)).ToArray();
+        var picker=new ComboBox{ItemsSource=choices,SelectedItem=choices.FirstOrDefault(c=>c.Name.Equals(P.TextFontFamily,StringComparison.OrdinalIgnoreCase))??choices[0],HorizontalAlignment=HorizontalAlignment.Stretch,MaxWidth=440};
+        System.Windows.Automation.AutomationProperties.SetAutomationId(picker,"TextFontFamily");
+        picker.SelectionChanged+=(_,_)=>{if(picker.SelectedItem is FontChoice choice){P.TextFontFamily=choice.Name;sidebar.Apply();}};
+        SettingRow("Schriftart (gesamter Text)",picker);
+        picker.ToolTip=SettingsText.Translate("Gilt für Sidebar und Einstellungen. Neue Schriften zuerst in Windows installieren und die Sidebar neu starten.",P.SettingsLanguage);
+    }
+    private sealed record FontChoice(string Name)
+    {
+        public override string ToString()=>Name.Length==0?SettingsText.Translate("Standard (Design)",SettingsText.CurrentLanguage):Name;
+    }
+    private void HardwareNameEditor(Device device)
+    {
+        Label("Hardware-Name");
+        var input=new TextBox{Text=P.HardwareNames.TryGetValue(device.Id,out var name)?name:"",MaxLength=160,MinWidth=80,HorizontalAlignment=HorizontalAlignment.Stretch,Padding=new Thickness(8,5,8,5)};
+        System.Windows.Automation.AutomationProperties.SetAutomationId(input,"HardwareNameInput");
+        var original=Ui.Text(device.Name,11,"Muted");original.TextWrapping=TextWrapping.Wrap;
+        System.Windows.Automation.AutomationProperties.SetAutomationId(original,"OriginalHardwareName");
+        page.Children.Add(original);page.Children.Add(input);
+        Note("Leer lassen, um den Originalnamen zu verwenden. Mit Übernehmen oder Enter speichern.");
+        void Save(bool reset){P.SetHardwareName(device.Id,reset?null:input.Text);sidebar.Apply();Navigate("Geräte");}
+        input.KeyDown+=(_,e)=>{if(e.Key==System.Windows.Input.Key.Enter){e.Handled=true;Save(false);}};
+        var buttons=new StackPanel{Orientation=Orientation.Horizontal,Margin=new Thickness(0,6,0,8)};
+        var save=Ui.Button("Übernehmen",()=>Save(false));System.Windows.Automation.AutomationProperties.SetAutomationId(save,"SaveHardwareName");buttons.Children.Add(save);
+        var reset=Ui.Button("Originalname wiederherstellen",()=>Save(true));reset.Margin=new Thickness(8,0,0,0);System.Windows.Automation.AutomationProperties.SetAutomationId(reset,"ResetHardwareName");buttons.Children.Add(reset);page.Children.Add(buttons);
     }
     private void LayoutPicker()
     {

@@ -106,7 +106,7 @@ internal static class Program
    if(key=="Darstellung")
    {
     Require(pageScroll.ScrollableHeight==0,"The entire compact appearance form fits at the minimum window height");
-    var selects=Descendants(settingsRoot).OfType<ComboBox>().Where(c=>System.Windows.Automation.AutomationProperties.GetAutomationId(c)!="SettingsLanguage").ToArray();Require(selects.Length==3,"Appearance uses three compact dropdowns instead of duplicate tile selectors");Require(Math.Abs(Bounds(selects[0],settingsRoot).Left-Bounds(selects[1],settingsRoot).Left)<1,"Layout and color choices share one aligned column");Require(Bounds(selects[1],settingsRoot).Top>Bounds(selects[0],settingsRoot).Bottom,"Layout and color choices sit directly below one another");
+    var selects=Descendants(settingsRoot).OfType<ComboBox>().Where(c=>System.Windows.Automation.AutomationProperties.GetAutomationId(c)!="SettingsLanguage").ToArray();Require(selects.Length==4,"Appearance uses four compact dropdowns including the all-text font selector");Require(Math.Abs(Bounds(selects[0],settingsRoot).Left-Bounds(selects[1],settingsRoot).Left)<1,"Layout and color choices share one aligned column");Require(Bounds(selects[1],settingsRoot).Top>Bounds(selects[0],settingsRoot).Bottom,"Layout and color choices sit directly below one another");
     Require(selects[0].SelectedItem.ToString()==CardLayouts.Get(sidebar.Prefs.Layout).Name,"Selected layout displays only its friendly name");Require(!Descendants(settingsRoot).OfType<TextBlock>().Any(t=>t.Text.Contains("CardLayout {")||t.Text.Contains("SidebarDesign {")),"No technical record data is visible in the appearance form");
     var slider=Descendants(settingsRoot).OfType<Slider>().First();slider.Value=slider.Minimum;double before=slider.Value;Slider.IncreaseLarge.Execute(null,slider);Require(slider.Value>before,"The compact slider template responds to its routed command");
    }
@@ -231,6 +231,29 @@ internal static class Program
   }
   navigate.Invoke(settings,new object[]{"Darstellung"});Arrange(settingsRoot,960);var instrumentSizeSlider=LogicalDescendants(settingsRoot).OfType<Slider>().Single(s=>System.Windows.Automation.AutomationProperties.GetAutomationId(s)=="WholeGraphicSize");instrumentSizeSlider.Value=150;Require(sidebar.Prefs.InstrumentScale==1.5&&Preferences.Load().InstrumentScale==1.5,"Whole instrument size slider persists across restart");
   foreach(var layout in CardLayouts.All)foreach(int count in new[]{1,2}){var prefs=new Preferences{Layout=layout.Key,Columns=count,ColumnWidth=200,ExpandMultiColumnReadings=true,InstrumentScale=2};var card=CardLayouts.Create(cpu,prefs);card.Update(cpu,prefs);var host=Host(card.View,DesignCatalog.Get("Graphite"),200);Arrange(host,200);var figure=Descendants(host).OfType<FrameworkElement>().FirstOrDefault(e=>System.Windows.Automation.AutomationProperties.GetAutomationId(e)=="CardInstrument");if(figure!=null)Require(Bounds(figure,host).Right<=200+.6,"Large graphics fit narrow widgets without overflowing: "+layout.Key+" columns="+count);}
+  // Exercise the actual rename and reset controls against the production sidebar.
+  sidebar.Prefs.HiddenDevices.Clear();sidebar.Prefs.HiddenCategories.Clear();sidebar.Prefs.HiddenMetrics.Clear();sidebar.Prefs.ColumnWidth=300;sidebar.Prefs.Columns=1;sidebar.Prefs.FontScale=1;sidebar.Prefs.Layout="Original";
+  selectPage.Invoke(settings,new object[]{"Geräte"});Arrange(settingsRoot,960);
+  var renameList=LogicalDescendants(settingsRoot).OfType<ListBox>().Single(b=>System.Windows.Automation.AutomationProperties.GetAutomationId(b)=="DeviceList");renameList.SelectedItem=renameList.Items.OfType<ListBoxItem>().First(i=>(string)i.Tag==cpu.Id);Arrange(settingsRoot,960);
+  var nameInput=LogicalDescendants(settingsRoot).OfType<TextBox>().Single(b=>System.Windows.Automation.AutomationProperties.GetAutomationId(b)=="HardwareNameInput");nameInput.Text="My workstation CPU";
+  LogicalDescendants(settingsRoot).OfType<Button>().Single(b=>System.Windows.Automation.AutomationProperties.GetAutomationId(b)=="SaveHardwareName").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Arrange(settingsRoot,960);
+  Require(Preferences.Load().HardwareNames[cpu.Id]=="My workstation CPU","Rename button saves the selected device name");
+  Require(Descendants(((IHardwareCard)viewMap[cpu.Id]!).View).OfType<TextBlock>().Any(t=>t.Text=="My workstation CPU"),"Custom hardware name appears immediately on its sidebar card");
+  Require(sidebar.Latest!.Devices.Single(d=>d.Id==cpu.Id).Name==cpu.Name,"Renaming leaves detected hardware and sensor identity intact");
+  settingsRoot.Measure(new Size(960,690));settingsRoot.Arrange(new Rect(0,0,960,690));settingsRoot.UpdateLayout();Save(settingsRoot,Path.Combine(folder,"Hardware-Name-Setting.png"));
+  LogicalDescendants(settingsRoot).OfType<Button>().Single(b=>System.Windows.Automation.AutomationProperties.GetAutomationId(b)=="ResetHardwareName").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Arrange(settingsRoot,960);
+  Require(!Preferences.Load().HardwareNames.ContainsKey(cpu.Id)&&Descendants(((IHardwareCard)viewMap[cpu.Id]!).View).OfType<TextBlock>().Any(t=>t.Text==Ui.HardwareName(cpu.Name)),"Reset button restores the original name in storage and on screen");
+  foreach(var fontName in new[]{"Arial","Consolas"})foreach(var layout in CardLayouts.All)
+  {
+   var fontPrefs=new Preferences{TextFontFamily=fontName,Layout=layout.Key};var fontCard=CardLayouts.Create(cpu,fontPrefs);var fontHost=Host(fontCard.View,DesignCatalog.Get("Original"),300);Arrange(fontHost,300);fontCard.Update(cpu,fontPrefs);Arrange(fontHost,300);
+   Require(Descendants(fontHost).OfType<TextBlock>().All(t=>t.FontFamily.Source==fontName),"Selected font covers every text role in "+layout.Key+" / "+fontName);
+  }
+  Require(Ui.Font(new Preferences{TextFontFamily="Missing test font 12345"},"Consolas").Source=="Consolas","Unavailable installed font falls back to the layout default");
+  selectPage.Invoke(settings,new object[]{"Darstellung"});Arrange(settingsRoot,960);var fontPicker=LogicalDescendants(settingsRoot).OfType<ComboBox>().Single(b=>System.Windows.Automation.AutomationProperties.GetAutomationId(b)=="TextFontFamily");
+  fontPicker.SelectedItem=fontPicker.Items.Cast<object>().First(c=>(string)c.GetType().GetProperty("Name")!.GetValue(c)! == "Arial");Pump();Arrange(settingsRoot,960);
+  Require(sidebar.Prefs.TextFontFamily=="Arial"&&Preferences.Load().TextFontFamily=="Arial"&&settings.FontFamily.Source=="Arial","Font selector applies to settings and persists immediately");
+  settingsRoot.Measure(new Size(960,690));settingsRoot.Arrange(new Rect(0,0,960,690));settingsRoot.UpdateLayout();Save(settingsRoot,Path.Combine(folder,"Font-Family-Setting.png"));
+  fontPicker.SelectedIndex=0;Require(sidebar.Prefs.TextFontFamily==""&&settings.FontFamily.Source=="Segoe UI","Default font option restores design typography");
   settings.Close();sidebar.Close();
   int combinations=DesignCatalog.All.Count*CardLayouts.All.Count*4;Console.WriteLine($"{checks} native layout/scroll checks passed; {combinations} layout, color and width combinations rendered.");File.WriteAllText(Path.Combine(TestRoot,"UITests","LayoutQA-result.txt"),$"PASS: {checks} checks; {combinations} render combinations; widget pin assignment, CPU selector, layout picker and mouse wheel verified.");
  }

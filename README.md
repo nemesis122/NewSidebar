@@ -1,122 +1,75 @@
-# Sidebar by NemeSIS
+# Sidebar by NemeSIS v2.12.2
 
-A native, portable Windows hardware sidebar for CPU, RAM, GPU, drives and network.
+A portable Windows hardware sidebar for CPU, RAM, GPU, drives, network and custom sensors.
 
-## New in v2.12.0: custom hardware names and fonts
+## Startup and portable-location fixes
 
-- In **Settings → Devices & readings**, select a device and enter a **Hardware name**. Choose **Apply** or press Enter to save. Leave it blank or choose **Restore original name** to reset it. Names are saved per device ID and do not change sensor detection.
-- In **Settings → Appearance & text**, choose **Font family (all text)** to change the sidebar, readings, instruments and settings. **Default (design)** restores the original typography. Install additional fonts in Windows and restart the sidebar to make them available.
-- Both preferences persist in `aurora-settings.json`.
-- System information shows the version of the running assembly, avoiding stale version labels.
+- Opening a portable copy no longer activates an unrelated copy in another folder.
+- If an existing startup task points to another EXE, the app requests Windows approval to update its executable path and working directory to the copy you selected. Your startup on/off choice and logon delay are preserved. Windows may require administrator approval once when the location changes.
+- If approval is declined, the selected copy still opens with the sensor access available to a standard user. An unsuccessful repair is reported instead of silently exiting.
+- System information separately identifies the **Running EXE**, the **Startup EXE** and the actual running version.
+- Startup exceptions produce a visible message and a diagnostic log, with a temporary-folder fallback if the EXE folder cannot be written.
 
-## Download
+## Download and upgrade
 
-[Download the portable EXE](https://github.com/nemesis122/NewSidebar/releases/latest)
+Download [Sidebar-by-NemeSIS-v2.12.2.exe](https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Sidebar-by-NemeSIS-v2.12.2.exe). Windows 10/11 x64; .NET 8.0.32 is bundled. The app is unsigned; Windows may display a reputation warning.
 
-Windows 10/11 x64. Run the EXE from a writable folder. The .NET runtime is bundled;
-settings are stored in `aurora-settings.json` beside the EXE.
+1. Exit older copies through their notification-area icon before upgrading.
+2. Put the EXE in your chosen writable folder. To retain preferences, keep your existing **aurora-settings.json** beside it. Different folders have separate preferences.
+3. Start this EXE. If the existing startup task points elsewhere, approve the Windows administrator request to update that task. On subsequent starts from the registered location, no further relocation request is needed.
 
-## Included from v2.11.0
+On a fresh PC, configure sensor access and optional Windows startup through **Settings → Setup** and **Position & size**. No startup task is created automatically on a fresh PC. Some CPU/motherboard sensors need PawnIO and administrator access.
 
-- **Settings → Text sizes**: independently adjust widget titles, hardware names,
-  labels, readings, instrument numbers and instrument units from 50% to 200%.
-- **Settings → Appearance & text → Graphic size (%)**: resize the complete
-  instrument from 50% to 200%, including its number and unit. Enlargement is
-  limited to the available space in narrow widgets.
-- Long hardware names wrap; titles and hardware names follow the text controls.
-- Enable **Text below the graph** with 2–4 columns to put readings underneath
-  the instrument. One-column layouts keep their existing arrangement.
-- **Notification-area icon only**, without taskbar entries. Right-click that
-  icon for Settings, Show sidebar or Exit. Exit before replacing the EXE.
-- Reset text sizes to 100%; settings persist across restarts.
+## Features and controls
 
-| Graphic size control | Independent text sizes |
-| :---: | :---: |
-| [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.11.0/Graphic-Size-Setting.png" width="280" alt="Graphic size slider in Appearance and text">](https://github.com/nemesis122/NewSidebar/releases/download/v2.11.0/Graphic-Size-Setting.png) | [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.11.0/Text-Size-Settings.png" width="280" alt="Six independent text size sliders">](https://github.com/nemesis122/NewSidebar/releases/download/v2.11.0/Text-Size-Settings.png) |
+- 48 layout variants and 14 independent color themes, including Original, Twin Rings, Hex-Core, Dot Matrix, Rackmount, compact lists and large-reading variants.
+- CPU, memory, GPU, individual drives and network widgets; select devices and visible readings independently. Custom sensors can join their matching widgets.
+- **Devices & readings → Hardware name:** select a device, enter a name, then Apply or Enter. Restore original name resets it without changing sensor identity.
+- **Appearance & text → Font family (all text):** choose an installed Windows font. Text sizes independently controls widget titles, hardware names, labels, readings, instrument numbers and units (50–200%).
+- **Graphic size (%)** resizes the whole instrument. Widget background opacity leaves text and readings opaque.
+- 1–4 columns, widths of 50–440 logical pixels, multiple monitors, DPI scaling, fit-to-view and a hover scrollbar. With 2–4 columns, **Text below the graph** places readings underneath the instrument.
+- Network **DL / UL** use whole MB/s; **Link** uses Mbit/s or Gbit/s. Optional internal/external IPs are fetched only by the refresh button and saved until the next request. No startup or scheduled IP lookup runs. External lookup uses api64.ipify.org and the system default internet route.
+- Settings in German, English, French, Italian, Spanish and Portuguese; sidebar labels stay English. Notification-area icon only, with Settings, Show and Exit.
 
-[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.11.0/Graphic-Size-Comparison.png" width="540" alt="The whole Hex-Core instrument at 50 and 150 percent">](https://github.com/nemesis122/NewSidebar/releases/download/v2.11.0/Graphic-Size-Comparison.png)
+## Validation and hardware
 
-Screenshots show demo hardware and simulated readings.
+92 data/startup checks and 25,924 native UI checks passed, with 2,688 layout/color/width render combinations. Checks include child-process activation isolation, stale startup targets, all settings languages, and updating an unregistered Windows Task Scheduler definition while preserving on/off state and delay. The portable EXE reports version 2.12.2.0.
+
+The complete Windows approval/logon workflow on the second PC still needs real-machine validation. These software tests do not prove compatibility with every hardware model. LibreHardwareMonitor 0.9.6 supports AMD/Intel CPUs and NVIDIA/AMD/Intel GPUs; actual readings depend on motherboard, firmware, drivers and permissions. Physically checked hardware includes Ryzen 9 5900X and RTX 3080.
 
 ## Preview
 
-### Selected color themes
-
-Click a thumbnail to open the full image. All examples show **Twin rings** with simulated readings.
+Click a thumbnail for the full image. Previews use demo hardware and simulated readings. Theme/layout examples remain representative; older example screenshots may show earlier settings labels.
 
 | OLED Black | Midnight | Nord |
-| :---: | :---: | :---: |
-| [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-OLED.png" width="150" alt="OLED Black">](https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-OLED.png) | [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-Midnight.png" width="150" alt="Midnight">](https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-Midnight.png) | [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-Nord.png" width="150" alt="Nord">](https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-Nord.png) |
-| **Dracula** | **Terminal** | **Light** |
-| [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-Dracula.png" width="150" alt="Dracula">](https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-Dracula.png) | [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-Terminal.png" width="150" alt="Terminal">](https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-Terminal.png) | [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-Light.png" width="150" alt="Light">](https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Theme-Light.png) |
+|---|---|---|
+|[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Theme-OLED.png" width="145" alt="OLED Black">](https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Theme-OLED.png)|[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Theme-Midnight.png" width="145" alt="Midnight">](https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Theme-Midnight.png)|[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Theme-Nord.png" width="145" alt="Nord">](https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Theme-Nord.png)|
+| Dracula | Terminal | Light |
+|[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Theme-Dracula.png" width="145" alt="Dracula">](https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Theme-Dracula.png)|[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Theme-Terminal.png" width="145" alt="Terminal">](https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Theme-Terminal.png)|[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Theme-Light.png" width="145" alt="Light">](https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Theme-Light.png)|
 
-### Two columns & settings
+### Two columns and nerd designs
 
-| Twin Rings · two columns | Settings menu |
-| :---: | :---: |
-| [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/TwinRings-2Columns.png" width="180" alt="Twin Rings with two columns">](https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/TwinRings-2Columns.png) | [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Settings-Preview.png" width="280" alt="Settings menu">](https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Settings-Preview.png) |
+[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/TwinRings-2Columns.png" width="300" alt="Twin Rings in two columns">](https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/TwinRings-2Columns.png)
 
-### Nerd designs
+[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Nerd-Designs.png" width="550" alt="Hex-Core, Bitfield and Rackmount">](https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Nerd-Designs.png)
 
-[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Nerd-Designs.png" width="420" alt="Hex-Core, Bitfield and Rackmount">](https://github.com/nemesis122/NewSidebar/releases/download/v2.8.0/Nerd-Designs.png)
+[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/MultiColumn-Preview.png" width="300" alt="Instruments above readings in two columns">](https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/MultiColumn-Preview.png)
 
-## Features
+### Current settings and hardware names
 
-- 48 layout variants, including large-reading options; 14 independent color themes.
-- Hex-Core, Bitfield, Rackmount, gauges, LED meters, console and compact lists.
-- Configurable text colors, per-category instrument accents and widget background opacity.
-- One to four columns, multiple monitors, fit-to-view and scrolling with hover scrollbar.
-- Custom sensors in their matching widgets; selectable CPU temperature source.
-- Settings in German, English, French, Italian, Spanish and Portuguese.
-- Sidebar labels always remain English, with short Temp / Clock / DL / UL / Link labels.
-- Optional automatic startup after sensor access has been configured.
+[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Hardware-Names.png" width="320" alt="Custom hardware name and selectable readings">](https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Hardware-Names.png) [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Font-Selection.png" width="320" alt="Font family and appearance controls">](https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Font-Selection.png)
 
-## Expanded multi-column presentation
+[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Text-Size-Settings.png" width="300" alt="Independent text sizes">](https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Text-Size-Settings.png)
 
-Enable **Settings → Appearance & text → Text below the graph**.
-With two or more columns, labels and readings are 20% larger and distributed
-through the widget. Instrument layouts put the instrument above the readings.
-One column keeps the existing layout. This is an optional presentation; existing
-design choices are preserved. Very narrow columns scale uniformly to fit.
+[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Graphic-Size-Comparison.png" width="430" alt="Whole instrument size comparison">](https://github.com/nemesis122/NewSidebar/releases/download/v2.12.2/Graphic-Size-Comparison.png)
 
-[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.10.0/MultiColumn-Preview.png" width="350" alt="Instrument above readings in a two-column demo layout">](https://github.com/nemesis122/NewSidebar/releases/download/v2.10.0/MultiColumn-Preview.png)
+## Source and build
 
-## Manual IP addresses and compact widgets
-
-In Settings → Devices & readings, select your network adapter and enable Internal IP
-and/or External IP. Press **Fetch / refresh IP addresses** to save new values.
-There is **no automatic lookup**, on startup or on a timer. Saved addresses remain
-until you press the button again. The external lookup uses api64.ipify.org and
-the system default internet route, which may differ from the selected adapter.
-Failed or timed-out lookups preserve the previous external address.
-
-Widget width can be reduced to **50 logical pixels** and text size to **65%**.
-Long IP addresses wrap instead of overlapping nearby values.
-
-## Hardware and sensor access
-
-[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.9.0/Hardware-Demo.png" width="350" alt="Current two-column sidebar with demo hardware">](https://github.com/nemesis122/NewSidebar/releases/download/v2.9.0/Hardware-Demo.png)
-
-Current Twin Rings layout with simulated hardware readings and documentation IPs.
-
-Uses LibreHardwareMonitor 0.9.6 for AMD/Intel CPUs and NVIDIA/AMD/Intel GPUs.
-Actual readings depend on the hardware, motherboard, driver and access rights.
-Physically checked on Ryzen 9 5900X and RTX 3080; not every model has been tested.
-Some sensors require PawnIO and one-time administrator setup via Settings.
-The portable application itself does not require an application installer.
-
-## Build and validation
-
-Requires Windows and the .NET 8 SDK. Run `Build-Portable.ps1` from this repository.
+The repository and **Sidebar-by-NemeSIS-v2.12.2-source.zip** contain the matching source, tests, build script and third-party notices. Build on Windows with the .NET 8 SDK using **Build-Portable.ps1**.
 
 ```powershell
-dotnet run --project Tests/Checks.csproj -c Release --configfile Source/NuGet.Config
-dotnet run --project UITests/LayoutQA.csproj -c Release --configfile UITests/NuGet.Config
+dotnet run --project Tests/Checks.csproj -c Release
+dotnet run --project UITests/LayoutQA.csproj -c Release
 ```
 
-Version 2.11.0 passed 78 data checks, 25,801 native checks and 2,688 layout/color/width combinations,
-including additional 1440p/4K layout checks at 100/150/200 percent DPI.
-Software layout tests do not constitute physical validation of all hardware models.
-
-See `THIRD-PARTY-NOTICES.txt` and `Licenses/` for dependency notices.
-
+**SHA256SUMS.txt** contains checksums for the uploaded assets. See **THIRD-PARTY-NOTICES.txt** and **Licenses/** for dependencies.

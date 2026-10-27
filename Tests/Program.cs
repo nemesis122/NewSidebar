@@ -1,8 +1,35 @@
 ﻿using Aurora;
 using System.Text.Json;
 if(OperatingSystem.IsWindows())TestProcessSafety.SetErrorMode(3);
+if(OperatingSystem.IsWindows() && args.Length==2 && args[0]=="--signal-startup-instance")
+{
+    using var signal=EventWaitHandle.OpenExisting(StartupIdentity.ShowEventName(args[1]));
+    signal.Set();return;
+}
 int passed=0;
 void Require(bool condition,string label) { if(!condition) throw new Exception(label); Console.WriteLine("PASS "+label); passed++; }
+string portableRoot=Path.Combine(Path.GetTempPath(),"NemeSIS-startup-tests-"+Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(Path.Combine(portableRoot,"OEM"));Directory.CreateDirectory(Path.Combine(portableRoot,"Downloads"));
+string oemExe=Path.Combine(portableRoot,"OEM","Sidebar.exe"),downloadExe=Path.Combine(portableRoot,"Downloads","Sidebar.exe");
+File.WriteAllText(oemExe,"");File.WriteAllText(downloadExe,"");
+try
+{
+    Require(StartupIdentity.MutexName(oemExe)!=StartupIdentity.MutexName(downloadExe),"A downloaded portable copy cannot activate the OEM instance");
+    Require(StartupIdentity.MutexName(oemExe)==StartupIdentity.MutexName(oemExe.ToLowerInvariant()),"Windows path casing does not create duplicate instances");
+    Require(StartupIdentity.SameExecutable(oemExe,Path.Combine(portableRoot,"OEM","..","OEM","Sidebar.exe")),"Equivalent executable paths identify one installation");
+    Require(!StartupIdentity.MatchesTaskTarget(downloadExe,oemExe),"An OEM launch cannot redirect to a Downloads startup task");
+    Require(StartupIdentity.MatchesTaskTarget(oemExe,oemExe),"The matching installed executable can use elevated startup");
+    Require(!StartupIdentity.MatchesTaskTarget(oemExe+".missing",oemExe+".missing"),"A stale startup task cannot stop a portable launch");
+    Require(!StartupIdentity.SameExecutable(null,oemExe),"An unavailable executable path never matches another copy");
+    using var oemSignal=new EventWaitHandle(false,EventResetMode.AutoReset,StartupIdentity.ShowEventName(oemExe));
+    using var downloadSignal=new EventWaitHandle(false,EventResetMode.AutoReset,StartupIdentity.ShowEventName(downloadExe));
+    var childStart=new System.Diagnostics.ProcessStartInfo(Environment.ProcessPath!){UseShellExecute=false,CreateNoWindow=true};
+    childStart.ArgumentList.Add("--signal-startup-instance");childStart.ArgumentList.Add(downloadExe);
+    using var child=System.Diagnostics.Process.Start(childStart)!;
+    Require(downloadSignal.WaitOne(10000),"A second process reaches its own portable instance");
+    Require(child.WaitForExit(10000)&&child.ExitCode==0&&!oemSignal.WaitOne(0),"A running OEM instance receives no activation from Downloads");
+}
+finally { Directory.Delete(portableRoot,true); }
 Require(new Metric("","",null,"°C").Display(true)=="—","Unavailable values remain unavailable");
 Require(new Metric("","",double.NaN,"%").Display(false)=="—","Invalid numeric data is not displayed");
 Require(new Metric("","",100,"°C").Display(true)=="212 °F","Celsius to Fahrenheit");

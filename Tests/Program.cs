@@ -126,6 +126,16 @@ history.Record(new[]{historyDevice with{Metrics=new(){new("load","Auslastung",do
 for(int i=3;i<1000;i++)history.Record(new[]{historyDevice},historyTime.AddMilliseconds(i*250));var points=history.Read(historyDevice.Id,"load");Require(points.Count<=MetricHistory.MaximumSamples&&points.All(p=>p.Time>=history.LatestTime-MetricHistory.Window),"History retains only a bounded 60-second window");var unchanged=points.Count;history.Record(new[]{historyDevice},history.LatestTime.AddSeconds(-1));Require(history.Read(historyDevice.Id,"load").Count==unchanged,"An out-of-order snapshot cannot corrupt current history");history.Record(new[]{historyDevice},historyTime.AddHours(-1));Require(history.Read(historyDevice.Id,"load").Count==1,"A backwards clock adjustment resets the window instead of freezing graphs");
 var manyDevices=Enumerable.Range(0,700).Select(i=>historyDevice with{Id="bounded/"+i}).ToArray();history.Record(manyDevices,historyTime.AddHours(1));Require(history.SeriesCount==MetricHistory.MaximumSeries,"History series count stays bounded across device changes");history.Record(Array.Empty<Device>(),historyTime.AddHours(2));Require(history.SeriesCount==0,"Expired disconnected devices are removed from history");
 var legacyLargePrefs=new Preferences{Layout="TwinRings.Large",FontScale=1.2,ValueTextScale=1.3};legacyLargePrefs.Save();var migratedLargePrefs=Preferences.Load();Require(migratedLargePrefs.Layout=="TwinRings"&&migratedLargePrefs.FontScale==1.2&&migratedLargePrefs.ValueTextScale==1.3,"Removed large-reading design migrates without changing the user text sliders");
+Require(new Metric("fraction","Load",31.7,"%").Display(false)=="31 %","Whole displayed readings truncate rather than round");
+Require(new Metric("voltage","Voltage",.73,"V").Display(false)=="0.73 V","Sub-unit voltage keeps decimals");
+Require(new Metric("voltage","Voltage",1.73,"V").Display(false)=="1 V","Values above one use whole readings in every unit");
+Require(new Metric("clock","Clock",3870,"MHz").Display(false)=="3 GHz","Whole formatting applies after clock conversion");
+Require(new Metric("bytes","Read",31.7*1024,"B/s").Display(false)=="31 KB/s","Byte rates truncate after unit scaling");
+Require(new Metric("memory","Used",13.9,"GB").Display(false)=="13 GB","Memory amounts use whole readings");
+Require(new Metric("negative","Temperature",-3.7,"°C").Display(false)=="-3 °C","Negative readings truncate toward zero");
+Require(new Metric("ip","IP",null,"IP",TextValue:"192.168.0.119").Display(false)=="192.168.0.119","Text and IP addresses preserve punctuation");
+
+
 Console.WriteLine($"{passed} total checks passed");
 sealed class AddressHandler:System.Net.Http.HttpMessageHandler{
  public int Calls;public bool Fail;public bool Slow;public string Reply="203.0.113.99";
@@ -133,5 +143,6 @@ sealed class AddressHandler:System.Net.Http.HttpMessageHandler{
 }
 
 static class TestProcessSafety{[System.Runtime.InteropServices.DllImport("kernel32.dll")]internal static extern uint SetErrorMode(uint mode);}
+
 
 

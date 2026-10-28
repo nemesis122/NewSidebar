@@ -276,6 +276,12 @@ Große Hauptzahl und ruhige Messwertliste|Large primary reading with a clear rea
 Helle Widget-Flächen mit kompakten Zusatzwerten|Light widget surfaces with compact details|Widgets clairs avec détails compacts|Widget chiari con dettagli compatti|Widgets claros con detalles compactos|Widgets claros com detalhes compactos
 Dashboard mit Glasflächen und Datenkacheln|Dashboard with glass surfaces and data tiles|Tableau de bord avec surfaces en verre et tuiles de données|Dashboard con superfici in vetro e riquadri dati|Panel con superficies de cristal y mosaicos de datos|Painel com superfícies de vidro e blocos de dados
 Schwarze Referenz-Karten mit echtem 60-Sekunden-Verlauf|Black reference cards with real 60-second history|Cartes noires avec historique réel de 60 secondes|Schede nere con cronologia reale di 60 secondi|Tarjetas negras con historial real de 60 segundos|Cartões pretos com histórico real de 60 segundos
+Breiter Verlauf zwischen Hauptwert und Messwerten|Wide history between primary value and readings|Historique large entre valeur principale et mesures|Cronologia ampia tra valore principale e misure|Historial amplio entre valor principal y mediciones|Histórico amplo entre valor principal e leituras
+Messwerte links und große Verlaufskurve rechts|Readings on the left and a large history chart on the right|Mesures à gauche et grand historique à droite|Misure a sinistra e grande grafico a destra|Mediciones a la izquierda y gráfico grande a la derecha|Leituras à esquerda e gráfico amplo à direita
+Kompakte Messkarte mit Verlauf am unteren Rand|Compact reading card with a bottom history strip|Carte compacte avec historique en bas|Scheda compatta con cronologia in basso|Tarjeta compacta con historial inferior|Cartão compacto com histórico na base
+Zwei getrennte Verläufe mit eigenen Einheiten|Two separate histories with independent units|Deux historiques séparés avec leurs unités|Due cronologie separate con unità indipendenti|Dos historiales separados con unidades independientes|Dois históricos separados com unidades independentes
+Dezenter Verlauf hinter den Messwerten|Subtle history behind the readings|Historique discret derrière les mesures|Cronologia discreta dietro le misure|Historial sutil detrás de las mediciones|Histórico discreto atrás das leituras
+Verlauf und klar geordnete Messwertfelder|History chart with organized reading tiles|Historique avec tuiles de mesures organisées|Cronologia con riquadri di misure ordinati|Historial con mosaicos de mediciones ordenados|Histórico com blocos de leituras organizados
 """;
 }
 

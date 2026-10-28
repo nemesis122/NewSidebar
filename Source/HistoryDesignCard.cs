@@ -22,7 +22,7 @@ public sealed class HistoryDesignCard:Border,IHardwareCard
  public HistoryDesignCard(Device device,Preferences p,MetricHistory history)
  {
   prefs=p;this.history=history;deviceId=device.Id;Composition=CardLayouts.BaseLayout(p.Layout);
-  bool strip=Composition=="SignalStrip",tiles=Composition=="TelemetryGrid",below=p.Columns>1&&p.ExpandMultiColumnReadings;
+  bool strip=Composition=="SignalStrip",tiles=Composition=="TelemetryGrid",below=CardLayouts.ReadingsBelow(p);
   double scale=p.FontScale*CardLayouts.SpaceMultiplier(p);
   System.Windows.Documents.TextElement.SetFontFamily(this,Ui.Font(p,"Segoe UI"));
   Resources["Text"]=Ui.Brush(DesignCatalog.ColorOr(p.TextColor,"#F5F7FB"));Resources["Muted"]=Ui.Brush(DesignCatalog.ColorOr(p.LabelColor,"#A6AFBD"));Resources["HardwareName"]=Ui.Brush(DesignCatalog.ColorOr(p.HardwareNameColor,"#DDE5EF"));

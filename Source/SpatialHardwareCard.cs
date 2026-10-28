@@ -55,7 +55,11 @@ public sealed class SpatialHardwareCard:Border,IHardwareCard
    if(!tile)return group;
    return new Border{Background=Tint(accent,.13*p.Opacity),BorderBrush=Ui.Brush(accent),BorderThickness=new(1),Padding=new(9),Margin=new(3),Child=group};
   }
-  if(layout=="MetroMosaic")
+  if(layout=="MetroMosaic"&&CardLayouts.ReadingsBelow(p))
+  {
+   readings.Children.Add(Hero(true));var tiles=new System.Windows.Controls.Primitives.UniformGrid{Columns=2,Margin=new Thickness(-3)};foreach(var m in device.Metrics)tiles.Children.Add(Cell(m,true));readings.Children.Add(tiles);
+  }
+  else if(layout=="MetroMosaic")
   {
    var mosaic=new Grid{Margin=new(-3)};mosaic.ColumnDefinitions.Add(new(){Width=new(1,GridUnitType.Star)});mosaic.ColumnDefinitions.Add(new(){Width=new(1,GridUnitType.Star)});
    for(int r=0;r<2+Math.Max(0,(device.Metrics.Count-1)/2);r++)mosaic.RowDefinitions.Add(new(){Height=p.Columns>1?new GridLength(1,GridUnitType.Star):GridLength.Auto});
@@ -72,7 +76,7 @@ public sealed class SpatialHardwareCard:Border,IHardwareCard
   }
   else if(layout=="SplitPanel")
   {
-   var split=new Grid();bool below=p.Columns>1&&p.ExpandMultiColumnReadings;
+   var split=new Grid();bool below=CardLayouts.ReadingsBelow(p);
    split.ColumnDefinitions.Add(new(){Width=new(below?1:.9,GridUnitType.Star)});if(!below)split.ColumnDefinitions.Add(new(){Width=new(1.35,GridUnitType.Star)});
    if(below){split.RowDefinitions.Add(new(){Height=GridLength.Auto});split.RowDefinitions.Add(new(){Height=new(1,GridUnitType.Star)});}
    var hero=new Border{Background=Tint(accent,.16*p.Opacity),BorderThickness=new(3,0,0,0),BorderBrush=Ui.Brush(accent),Padding=new(7),Margin=new(0,0,below?0:9,below?9:0),Child=Hero()};split.Children.Add(hero);

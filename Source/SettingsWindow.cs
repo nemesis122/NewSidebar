@@ -165,8 +165,8 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
                 Slider("Grafikgröße (%)",50,200,P.InstrumentScale*100,5,"0",v=>P.InstrumentScale=v/100);
                 Slider("Widget-Hintergrund (%)",0,100,P.Opacity*100,5,"0",v=>P.Opacity=v/100);
                 var expandReadings=Check("Text unter dem Graphen",P.ExpandMultiColumnReadings,v=>P.ExpandMultiColumnReadings=v);System.Windows.Automation.AutomationProperties.SetAutomationId(expandReadings,"ExpandMultiColumnReadings");
-                expandReadings.IsEnabled=P.Columns>1;expandReadings.ToolTip=SettingsText.Translate("Benötigt mindestens 2 Spalten.",P.SettingsLanguage);ToolTipService.SetShowOnDisabled(expandReadings,true);
-                expandReadings.ToolTip=SettingsText.Translate("Ab 2 Spalten: Graph oben, Werte unten. Eine Spalte bleibt unverändert.",P.SettingsLanguage);
+                expandReadings.IsEnabled=true;
+                expandReadings.ToolTip=SettingsText.Translate("Graph oben, Werte unten – auch bei einer Spalte.",P.SettingsLanguage);
                 Select("Temperatureinheit",new[]{"°C","°F"},P.Fahrenheit?"°F":"°C",v=>P.Fahrenheit=v=="°F");
                 });
                 break;

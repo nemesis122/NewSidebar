@@ -49,6 +49,7 @@ public static class SettingsText
  private sealed class ChoiceConverter:IValueConverter
  {public object Convert(object value,Type target,object parameter,CultureInfo culture)=>Translate(value?.ToString()??"",CurrentLanguage);public object ConvertBack(object value,Type target,object parameter,CultureInfo culture)=>Binding.DoNothing;}
  private const string Data="""
+Maximal kompakte Messkarte mit klaren Datenzeilen|Ultra-compact card with clean reading rows|Carte ultra-compacte aux mesures claires|Scheda ultra-compatta con valori chiari|Tarjeta ultracompacta con lecturas claras|Cartão ultracompacto com leituras claras
 Asymmetrische Messwert-Kacheln|Asymmetric reading tiles|Tuiles de mesures asymétriques|Riquadri asimmetrici delle misure|Mosaicos asimétricos de lecturas|Mosaicos assimétricos de leituras
 Verbundene Sensorfelder um einen Chip|Connected sensor fields around a chip|Champs de capteurs reliés à une puce|Campi sensore collegati a un chip|Campos de sensores conectados a un chip|Campos de sensores ligados a um chip
 Geteilte Hardware- und Datenflächen|Split hardware and data surfaces|Surfaces séparées pour matériel et données|Superfici separate per hardware e dati|Superficies separadas de hardware y datos|Superfícies separadas de hardware e dados

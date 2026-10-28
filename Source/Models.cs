@@ -112,6 +112,7 @@ public record NetworkAddressState(string? InternalIP=null,string? ExternalIP=nul
 
 public record Metric(string Id, string Label, double? Value, string Unit, double Maximum = 100,string? Source=null,string? TextValue=null)
 {
+    public static string FormatNumber(double value)=>Math.Abs(value)>=1?Math.Truncate(value).ToString("0"):value.ToString("0.##");
     public string Display(bool fahrenheit)
     {
         if(TextValue!=null)return TextValue;
@@ -124,10 +125,10 @@ public record Metric(string Id, string Label, double? Value, string Unit, double
         {
             string[] units = { "B/s", "KB/s", "MB/s", "GB/s" }; int i = 0;
             while (v >= 1024 && i < 3) { v /= 1024; i++; }
-            return $"{v:0.#} {units[i]}";
+            return FormatNumber(v)+" "+units[i];
         }
-        if (u == "MHz" && v >= 1000) return $"{v / 1000:0.00} GHz";
-        return v.ToString(u == "V" ? "0.00" : u == "GB" ? "0.0" : "0.#") + " " + u;
+        if (u == "MHz" && v >= 1000) return FormatNumber(v / 1000)+" GHz";
+        return FormatNumber(v) + " " + u;
     }
 }
 public record Device(string Id, string Category, string Name, List<Metric> Metrics, bool DefaultVisible = true);

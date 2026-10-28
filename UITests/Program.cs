@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -23,6 +23,43 @@ internal static class Program
   string folder=Path.Combine(TestRoot,"Layouts");Directory.CreateDirectory(folder);
   var cpu=new Device("cpu","CPU","CPU · Layoutvorschau",new(){new("load","Auslastung",24,"%"),new("temp","Temperatur",52,"°C"),new("clock","Takt Ø",4200,"MHz",6000),new("power","Leistung",78,"W",450),new("volt","Spannung",1.25,"V",2)});
   var net=new Device("net","Network","Intel Ethernet · Layoutvorschau",new(){new("rx","Download",.1684,"MB/s",1250),new("tx","Upload",21.6,"MB/s",1250),new("link","Adapter-Link",10,"Gbit/s",10)});
+
+  var fillDevices=new[]{cpu,new Device("fill-ram","RAM","Demo memory",new(){new("load","Auslastung",35,"%"),new("used","Belegt",11.1,"GB",32),new("free","Verfügbar",20.9,"GB",32),new("total","Gesamt",32,"GB",32)}),cpu with{Id="fill-gpu",Category="GPU",Metrics=cpu.Metrics.Concat(new[]{new Metric("fan","Lüfter",1000,"RPM",3000),new Metric("vram","VRAM belegt",1402,"MB",10000),new Metric("vram-load","VRAM Last",14,"%")}).ToList()},new Device("fill-drive","Drives","Demo NVMe",new(){new("temp","Temperatur",57,"°C"),new("used","Belegt",31.6,"%"),new("read","Lesen",512,"B/s",10000),new("write","Schreiben",1024,"B/s",10000)})};
+  foreach(var layout in CardLayouts.All)foreach(int columns in new[]{2,3,4})foreach(bool below in new[]{false,true})
+  {
+   var prefs=new Preferences{Layout=layout.Key,Columns=columns,ColumnWidth=300,ExpandMultiColumnReadings=below};var grid=new HardwareCardGrid{Columns=columns};var fillCards=new List<IHardwareCard>();
+   for(int i=0;i<columns*2;i++){var device=fillDevices[i%fillDevices.Length];var card=CardLayouts.Create(device,prefs);card.Update(device,prefs);grid.Children.Add(card.View);fillCards.Add(card);}
+   double width=300*columns;grid.Measure(new Size(width,double.PositiveInfinity));var fonts=fillCards.SelectMany(c=>Descendants(c.View).OfType<TextBlock>()).ToDictionary(t=>t,t=>t.FontSize);var readingHeights=fillCards.SelectMany(c=>Descendants(c.View).OfType<ExpandedReadingsPanel>()).ToDictionary(p=>p,p=>p.DesiredSize.Height);
+   double natural=grid.DesiredSize.Height;grid.Height=natural+240;grid.Measure(new Size(width,grid.Height));grid.Arrange(new Rect(0,0,width,natural+240));grid.UpdateLayout();
+   for(int row=0;row<2;row++){var bounds=fillCards.Skip(row*columns).Take(columns).Select(c=>Bounds(c.View,grid)).ToArray();Require(bounds.All(b=>Math.Abs(b.Top-bounds[0].Top)<.6&&Math.Abs(b.Bottom-bounds[0].Bottom)<.6),"Cards fill identical row bounds: "+layout.Key+" columns="+columns+" below="+below);}
+   foreach(var pair in readingHeights)Require(pair.Key.Expanded&&pair.Key.ActualHeight>pair.Value+20,"Reading panels consume spare height independently of graph placement: "+layout.Key+" columns="+columns+" below="+below+" actual="+pair.Key.ActualHeight+" natural="+pair.Value+" fixed="+pair.Key.FixedChildren+" grid="+grid.ActualHeight+" requested="+(natural+240)+" card="+fillCards[0].View.ActualHeight+" gridalign="+grid.VerticalAlignment);
+   foreach(var pair in fonts)Require(Math.Abs(pair.Key.FontSize-pair.Value)<.001,"Filling cards preserves the chosen font sizes: "+layout.Key);
+   foreach(var card in fillCards){var surface=Descendants(card.View).OfType<Wpf.Ui.Controls.Card>().FirstOrDefault();if(surface!=null)Require(Math.Abs(Bounds(surface,grid).Top-Bounds(card.View,grid).Top)<.6&&Math.Abs(Bounds(surface,grid).Bottom-Bounds(card.View,grid).Bottom)<.6,"Fluent surfaces stretch to their card boundaries: "+layout.Key);}
+  }
+
+  foreach(string suffix in new[]{""})
+  {
+   var history=new MetricHistory();var time=new DateTime(2026,10,27,12,0,0);for(int i=0;i<=60;i++)history.Record(new[]{cpu},time.AddSeconds(i));
+   var prefs=new Preferences{Layout="WidgetBoardBlack"+suffix,ColumnWidth=330};var card=CardLayouts.Create(cpu,prefs,history);var host=Host(card.View,DesignCatalog.Get("OLED"),330);Arrange(host,330);card.Update(cpu,prefs);Arrange(host,330);
+   var chart=Descendants(host).OfType<HistoryAreaGraph>().Single();Require(chart.SampleCount==61,"Black board consumes the shared real-sample history");var same=CardLayouts.Create(cpu,prefs,history);same.Update(cpu,prefs);Require(history.Read(cpu.Id,"load").Count==61,"Rebuilding or repainting a card does not generate fake samples");
+   Require(Descendants(host).OfType<TextBlock>().Single(t=>System.Windows.Automation.AutomationProperties.GetAutomationId(t)=="PrimaryMetric").Text=="24","Reference board features CPU load beside the area chart");
+   var updated=cpu with{Metrics=cpu.Metrics.Select(m=>m.Id=="load"?m with{Value=38}:m.Id=="temp"?m with{Value=83}:m).ToList()};history.Record(new[]{updated},time.AddSeconds(61));card.Update(updated,prefs);Require(Descendants(host).OfType<TextBlock>().Any(t=>t.Text=="83 °C"),"Reference board keeps actual CPU temperature visible with load");
+   var missing=updated with{Metrics=updated.Metrics.Select(m=>m.Id=="load"?m with{Value=null}:m).ToList()};history.Record(new[]{missing},time.AddSeconds(62));card.Update(missing,prefs);Require(Descendants(host).OfType<TextBlock>().Single(t=>System.Windows.Automation.AutomationProperties.GetAutomationId(t)=="PrimaryMetric").Text=="—"&&history.Read(cpu.Id,"load")[^1].Value==null,"Unavailable readings clear the featured value and leave a history gap");
+   var fresh=CardLayouts.Create(cpu,prefs);var freshHost=Host(fresh.View,DesignCatalog.Get("OLED"),330);Arrange(freshHost,330);Require(Descendants(freshHost).OfType<HistoryAreaGraph>().Single().SampleCount==0,"New chart has no invented warm-up history");
+   var transparent=(Border)CardLayouts.Create(cpu,new Preferences{Layout=prefs.Layout,Opacity=0},history).View;Require(transparent.Opacity==1&&transparent.Background.Opacity==0,"Only the board background becomes transparent");
+  }
+  foreach(string style in new[]{"Fluent","Glass","Bento","Precision","NeonEdge","OrbitStudio","MetroMosaic","SensorMap","SplitPanel","Typographic","Blueprint","FluentUI","FluentUICompact","FluentUIHero","WidgetBoard","CommandCenter"})foreach(string suffix in new[]{""})
+  {
+   string key=style+suffix;Require(CardLayouts.Get(key).Key==key,"New contemporary layout is individually selectable: "+key);
+   var prefs=new Preferences{Layout=key,Theme="Midnight"};var card=CardLayouts.Create(cpu,prefs);var host=Host(card.View,DesignCatalog.Get("Midnight"),300);card.Update(cpu,prefs);Arrange(host,300);
+   var changed=cpu with{Metrics=cpu.Metrics.Select(m=>m.Unit=="°C"?m with{Value=81}:m).ToList()};card.Update(changed,prefs);Arrange(host,300);
+   Require(Descendants(host).OfType<TextBlock>().Any(t=>t.Text=="81 °C"),"New layouts update their complete reading list: "+key);
+   Require(Descendants(host).OfType<TextBlock>().Single(t=>System.Windows.Automation.AutomationProperties.GetAutomationId(t)=="PrimaryMetric").Text=="81","New layout instrument tracks live temperature: "+key);
+   prefs.Fahrenheit=true;card.Update(changed,prefs);Require(Descendants(host).OfType<TextBlock>().Any(t=>t.Text==changed.Metrics.First(m=>m.Unit=="°C").Display(true)),"New layouts honor temperature unit selection: "+key);
+   var missing=cpu with{Metrics=cpu.Metrics.Select(m=>m.Unit=="°C"?m with{Value=null}:m).ToList()};card.Update(missing,prefs);Require(Descendants(host).OfType<TextBlock>().Single(t=>System.Windows.Automation.AutomationProperties.GetAutomationId(t)=="PrimaryMetric").Text=="—","Missing temperature does not leave a stale instrument value: "+key);
+   var transparent=CardLayouts.Create(cpu,new Preferences{Layout=key,Theme="Midnight",Opacity=0});Require(transparent.View.Opacity==1,"Background opacity never fades the whole contemporary widget: "+key);
+   if(style=="Glass")Require(((LinearGradientBrush)((Border)transparent.View).Background).GradientStops.All(s=>s.Color.A==0),"Glass background becomes fully transparent at zero opacity");
+  }
   var originalGauge=CardLayouts.Create(cpu,new(){Layout="Gauges"});var originalHost=Host(originalGauge.View,DesignCatalog.Get("Graphite"),300);Arrange(originalHost,300);originalGauge.Update(cpu,new());Arrange(originalHost,300);Save(originalHost,Path.Combine(folder,"Gauges-reference.png"));
   foreach(var design in DesignCatalog.All)foreach(var layout in CardLayouts.All)foreach(double width in new[]{240d,430d})foreach(var device in new[]{cpu,net})
   {
@@ -77,7 +114,7 @@ internal static class Program
   var socketSensor=new SensorRow("/board/cpu","Mainboard","CPU","Temperature",50,"°C","SuperIO");
   var fakeSnapshot=new Snapshot(new(){cpu,net},new(){rawSensor,socketSensor},new(),DateTime.Now);
   var sidebar=new SidebarWindow();typeof(SidebarWindow).GetProperty("Latest")!.SetValue(sidebar,fakeSnapshot);sidebar.Prefs.HiddenCategories.Add("Custom");sidebar.Prefs.Pins.Clear();sidebar.Prefs.PinTargets.Clear();sidebar.Prefs.SettingsLanguage="de";
-  var settings=new SettingsWindow(sidebar);var navigate=typeof(SettingsWindow).GetMethod("Navigate",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)!;
+  var settings=new SettingsWindow(sidebar);Require(settings is Wpf.Ui.Controls.FluentWindow,"Production settings use the integrated Fluent window");var navigate=typeof(SettingsWindow).GetMethod("Navigate",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)!;
   navigate.Invoke(settings,new object[]{"Sensoren"});var sensorList=(ListView)typeof(SettingsWindow).GetField("sensorList",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)!.GetValue(settings)!;
   sensorList.SelectedIndex=0;var settingsRoot=(FrameworkElement)settings.Content;Arrange(settingsRoot,960);
   var pinButton=LogicalDescendants(settingsRoot).OfType<Button>().First(b=>System.Windows.Automation.AutomationProperties.GetAutomationId(b)=="PinSelectedSensor");pinButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Pump();
@@ -145,11 +182,11 @@ internal static class Program
   {
    var prefs=new Preferences{Layout=layoutKey,FontScale=scale};var view=CardLayouts.Create(device,prefs);var host=Host(view.View,DesignCatalog.Get("Original"),width);Arrange(host,width);view.Update(device,prefs);Arrange(host,width);var main=Descendants(host).OfType<TextBlock>().First(t=>System.Windows.Automation.AutomationProperties.GetAutomationId(t)=="PrimaryMetric");var values=Descendants(host).OfType<StackPanel>().First(p=>System.Windows.Automation.AutomationProperties.GetAutomationId(p)=="GaugeReadings");Rect dialBounds=Bounds(main,host),valueBounds=Bounds(values,host);Require(valueBounds.Left>dialBounds.Right&&valueBounds.Top<=dialBounds.Top,"Gauge readings stay beside the instrument: "+layoutKey);foreach(var text in Descendants(values).OfType<TextBlock>()){Rect bounds=Bounds(text,host);Require(bounds.Left>=valueBounds.Left-.5&&bounds.Right<=valueBounds.Right+.5,"Gauge reading stays within its side column: "+layoutKey);}
   }
-  foreach(var baseLayout in CardLayouts.All.Where(layout=>CardLayouts.ReadingMultiplier(layout.Key)==1))
+  Require(CardLayouts.All.Count==41&&CardLayouts.All.All(l=>!l.Key.EndsWith(".Large")&&!l.Name.Contains("große Werte")),"Only normal designs are selectable");
+  foreach(var baseLayout in CardLayouts.All)
   {
-   var normalPrefs=new Preferences{Layout=baseLayout.Key};var largePrefs=new Preferences{Layout=baseLayout.Key+".Large"};var normal=CardLayouts.Create(cpu,normalPrefs);var large=CardLayouts.Create(cpu,largePrefs);var normalHost=Host(normal.View,DesignCatalog.Get("Graphite"),320);var largeHost=Host(large.View,DesignCatalog.Get("Graphite"),320);Arrange(normalHost,320);Arrange(largeHost,320);normal.Update(cpu,normalPrefs);large.Update(cpu,largePrefs);Arrange(normalHost,320);Arrange(largeHost,320);
-   var normalTexts=Descendants(normalHost).OfType<TextBlock>().ToArray();var largeTexts=Descendants(largeHost).OfType<TextBlock>().ToArray();Require(Math.Abs(largeTexts.First(t=>t.Text=="Load").FontSize/normalTexts.First(t=>t.Text=="Load").FontSize-1.35)<.001,"Large reading labels are 35 percent bigger: "+baseLayout.Key);Require(Math.Abs(largeTexts.First(t=>t.Text=="24 %").FontSize/normalTexts.First(t=>t.Text=="24 %").FontSize-1.35)<.001,"Large reading values are 35 percent bigger: "+baseLayout.Key);Require(Math.Abs(largeTexts.First(t=>t.Text=="CPU").FontSize/normalTexts.First(t=>t.Text=="CPU").FontSize-1.35)<.001,"Large reading headers follow the same text multiplier: "+baseLayout.Key);
-   var primaryNormal=normalTexts.FirstOrDefault(t=>System.Windows.Automation.AutomationProperties.GetAutomationId(t)=="PrimaryMetric");var primaryLarge=largeTexts.FirstOrDefault(t=>System.Windows.Automation.AutomationProperties.GetAutomationId(t)=="PrimaryMetric");if(primaryNormal!=null&&primaryLarge!=null)Require(primaryLarge.FontSize==primaryNormal.FontSize,"Large reading variant preserves the main instrument size: "+baseLayout.Key);
+   string legacy=baseLayout.Key+".Large";Require(CardLayouts.Get(legacy).Key==baseLayout.Key,"Removed variants resolve to their matching normal layout: "+legacy);Require(CardLayouts.ReadingMultiplier(legacy)==1,"Legacy variants no longer increase reading size: "+legacy);
+   var normal=CardLayouts.Create(cpu,new(){Layout=baseLayout.Key});var migrated=CardLayouts.Create(cpu,new(){Layout=legacy});Require(normal.GetType()==migrated.GetType(),"Migration preserves the original design family: "+legacy);
   }
   var largeGallery=new System.Windows.Controls.Primitives.UniformGrid{Columns=4,Width=1280,Background=Ui.Brush("#11151C")};foreach(string key in new[]{"Gauges","Gauges.Large","OrbitGauge","OrbitGauge.Large","TwinRings","TwinRings.Large","ArcGauge","ArcGauge.Large"}){var prefs=new Preferences{Layout=key,Theme="Graphite"};var card=CardLayouts.Create(cpu,prefs);var body=new StackPanel();body.Children.Add(new TextBlock{Text=CardLayouts.Get(key).Name,Foreground=Ui.Brush("#FFFFFF"),FontSize=16,Margin=new Thickness(6,12,0,12)});body.Children.Add(card.View);var host=Host(body,DesignCatalog.Get("Graphite"),320);host.MinHeight=260;Arrange(host,320);card.Update(cpu,prefs);Arrange(host,320);largeGallery.Children.Add(host);}Arrange(largeGallery,1280);Save(largeGallery,Path.Combine(folder,"Grossschrift.png"));
   var newGallery=new System.Windows.Controls.Primitives.UniformGrid{Columns=3,Width=1050,Background=Ui.Brush("#11151C")};foreach(string key in new[]{"SegmentGauge.Large","SpeedGauge.Large","ColumnGauge.Large"}){var prefs=new Preferences{Layout=key,Theme="Graphite"};var card=CardLayouts.Create(cpu with{Name="AMD Ryzen 9 5900X"},prefs);var body=new StackPanel();body.Children.Add(new TextBlock{Text=CardLayouts.Get(key).Name,Foreground=Brushes.White,FontSize=16,Margin=new Thickness(6,12,0,12)});body.Children.Add(card.View);var host=Host(body,DesignCatalog.Get("Graphite"),350);host.MinHeight=330;Arrange(host,350);card.Update(cpu,prefs);Arrange(host,350);newGallery.Children.Add(host);}Arrange(newGallery,1050);Save(newGallery,Path.Combine(folder,"Neue-Instrumente.png"));
@@ -290,5 +327,8 @@ internal static class Program
  static void Pump(){var frame=new DispatcherFrame();Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background,new Action(()=>frame.Continue=false));Dispatcher.PushFrame(frame);}
  static void Save(FrameworkElement element,string path){var bitmap=new RenderTargetBitmap((int)Math.Ceiling(element.ActualWidth),(int)Math.Ceiling(element.ActualHeight),96,96,PixelFormats.Pbgra32);bitmap.Render(element);var encoder=new PngBitmapEncoder();encoder.Frames.Add(BitmapFrame.Create(bitmap));using var file=File.Create(path);encoder.Save(file);}
 }
+
+
+
 
 

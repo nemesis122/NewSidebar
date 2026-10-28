@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.ComponentModel;
@@ -23,6 +23,7 @@ public sealed class SidebarWindow : Window
     private readonly TextBlock status = Ui.Text("SENSOREN WERDEN ERKANNT", 9, "Muted");
     private readonly Dictionary<string, IHardwareCard> views = new();
     private string shape = "";
+    private readonly MetricHistory history=new();
     private SettingsWindow? settings;
     private Button? hideButton;
     private bool placing, exiting;
@@ -114,12 +115,13 @@ public sealed class SidebarWindow : Window
         var data = PinPlacement.Compose(snapshot,Prefs).Where(d => !Prefs.HiddenCategories.Contains(d.Category) && !Prefs.HiddenDevices.Contains(d.Id))
             .Select(d=>d with {Name=Prefs.HardwareName(d.Id,d.Name),Metrics=d.Metrics.Where(m=>Prefs.IsMetricVisible(d.Id,m.Id)).ToList()}).Where(d=>d.Metrics.Count>0).ToList();
         data = data.OrderBy(d => { int i = Prefs.Order.IndexOf(d.Category); return i < 0 ? 99 : i; }).ToList();
+        history.Record(data,snapshot.Time);
         var key = string.Join("|", data.Select(d => d.Id + ":" + d.Name + ":" + string.Join(",",d.Metrics.Select(m=>m.Id+"="+m.Label))));
         if (shape != key)
         {
             shape = key; cards.Children.Clear(); cards.ColumnDefinitions.Clear(); views.Clear();
             Panel layout=Prefs.Columns>1?new HardwareCardGrid{Columns=Prefs.Columns}:new StackPanel();cards.Children.Add(layout);
-            foreach(var d in data){var card=CardLayouts.Create(d,Prefs);views[d.Id]=card;layout.Children.Add(card.View);}
+            foreach(var d in data){var card=CardLayouts.Create(d,Prefs,history);views[d.Id]=card;layout.Children.Add(card.View);}
         }
         foreach (var d in data) if (views.TryGetValue(d.Id, out var view)) view.Update(d, Prefs);
         status.Text = snapshot.Time.ToString("HH:mm:ss") + " · " + snapshot.Devices.Count + " GERÄTE";
@@ -127,6 +129,7 @@ public sealed class SidebarWindow : Window
         if (data.Count == 0 && cards.Children.Count == 0) cards.Children.Add(Ui.Text("No cards enabled.\nSelect devices in Settings ⚙.", 13, "Muted"));
         ResizeCards();
     }
+    public void OpenSettingsForDevice(string deviceId){OpenSettings();settings?.SelectDevice(deviceId);}
     public void OpenSettings()
     {
         if (settings == null) { settings = new SettingsWindow(this); settings.Closed += (_,_) => settings = null; }
@@ -247,3 +250,5 @@ public sealed class HardwareCard : Border,IHardwareCard
         }
     }
 }
+
+

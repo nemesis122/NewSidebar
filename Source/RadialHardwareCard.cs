@@ -70,7 +70,7 @@ public sealed class RadialHardwareCard:Border,IHardwareCard
   }
   protected override Size ArrangeOverride(Size size)
   {
-   double valueWidth=Math.Min(size.Width,value.DesiredSize.Width);label.Arrange(new Rect(0,0,inline?Math.Max(0,size.Width-valueWidth-7):size.Width,label.DesiredSize.Height));value.Arrange(new Rect(inline?size.Width-valueWidth:0,inline?0:label.DesiredSize.Height,valueWidth,value.DesiredSize.Height));return size;
+   double valueWidth=Math.Min(size.Width,value.DesiredSize.Width),naturalHeight=inline?Math.Max(label.DesiredSize.Height,value.DesiredSize.Height):label.DesiredSize.Height+value.DesiredSize.Height,top=Math.Max(0,(size.Height-naturalHeight)/2);label.Arrange(new Rect(0,top,inline?Math.Max(0,size.Width-valueWidth-7):size.Width,label.DesiredSize.Height));value.Arrange(new Rect(inline?size.Width-valueWidth:0,top+(inline?0:label.DesiredSize.Height),valueWidth,value.DesiredSize.Height));return size;
   }
  }
  private sealed class Dial

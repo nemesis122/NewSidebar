@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
@@ -7,7 +7,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>SidebarByNemeSIS</AssemblyName>
-    <Version>2.12.2</Version>
+    <Version>2.14.3</Version>
     <Product>Sidebar by NemeSIS</Product>
     <Title>Sidebar by NemeSIS</Title>
     <PlatformTarget>x64</PlatformTarget>
@@ -17,9 +17,14 @@
     <NoWarn>$(NoWarn);WFAC010</NoWarn>
     <RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
   </PropertyGroup>
-  <ItemGroup><PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" /></ItemGroup>
+  <ItemGroup><PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" /><PackageReference Include="WPF-UI" Version="4.3.0" /></ItemGroup>
   <ItemGroup>
     <Content Include="../Licenses/**/*" Link="Licenses/%(RecursiveDir)%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
+
+
+
+
+

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -9,11 +9,11 @@ namespace Aurora;
 public record CardLayout(string Key,string Name,string Description){public override string ToString()=>Name;}
 public static class CardLayouts
 {
- private static readonly CardLayout[] BaseLayouts=new[]{new CardLayout("Original","Original","Klassische Sensorliste"),new("Modern","Karten","Große Hauptzahl mit Werteliste"),new("Compact","Kompakt","Dichte Tabellen"),new("Dashboard","Dashboard","Hauptkennzahl und Statistikraster"),new("Gauges","Instrumente","Momentanwert als Rundinstrument"),new("Text","Textansicht","Rahmenlose Texttabellen"),new("Tiles","Wertekacheln","Jeder Wert in einer Kachel"),new("Bars","Balken","Große Pegelbalken für alle Werte"),new("OrbitGauge","Orbit","Rundinstrument mit Messwerten rechts"),new("TwinRings","Doppelring","Zwei konzentrische Ringe mit Messwerten rechts"),new("ArcGauge","Halbkreis","Kompaktes Halbkreis-Instrument mit klarer Werteliste"),new("SegmentGauge","Segmentring","Segmentiertes Rundinstrument mit Messwerten rechts"),new("SpeedGauge","Tachometer","Offener 270-Grad-Bogen mit Messwerten rechts"),new("ColumnGauge","Sensor-Säule","Senkrechte Sensor-Säule mit Messwerten rechts"),new("Console","Messpult","Kompaktes Messpult mit Segmentanzeige"),new("Digital","Digital","Digitale Hauptanzeige mit präziser Werteliste"),new("SideRail","Seitenbalken","Schlichte Messkarte mit seitlicher Akzentlinie"),new("HorseshoeGauge","Hufeisen","Offenes Rundinstrument mit Positionspunkt"),new("DotMatrix","Punktmatrix","LED-Punktmatrix mit digitalem Hauptwert"),new("Panorama","Panorama","Breite Hauptanzeige mit kompakter Werteliste"),new("Tape","Messstreifen","Vertikaler Messstreifen mit Skalenstrichen"),new("HexCore","Hex-Core","Sechseckiges Instrument mit Werteliste"),new("Bitfield","Bitfield","Digitale Hauptzahl mit echter 16-Bit-Darstellung"),new("Rackmount","Rackmount","Server-Panel mit zwei LED-Pegelreihen")};
- public static IReadOnlyList<CardLayout> All {get;}=BaseLayouts.Concat(BaseLayouts.Select(layout=>new CardLayout(layout.Key+".Large",layout.Name+" · große Werte",layout.Description+" · größere Sensorbezeichnungen und Messwerte"))).ToArray();
- public static CardLayout Get(string? key)=>All.FirstOrDefault(l=>l.Key==key)??All[0];
+ private static readonly CardLayout[] BaseLayouts=new[]{new CardLayout("Original","Original","Klassische Sensorliste"),new("Modern","Karten","Große Hauptzahl mit Werteliste"),new("Compact","Kompakt","Dichte Tabellen"),new("Dashboard","Dashboard","Hauptkennzahl und Statistikraster"),new("Gauges","Instrumente","Momentanwert als Rundinstrument"),new("Text","Textansicht","Rahmenlose Texttabellen"),new("Tiles","Wertekacheln","Jeder Wert in einer Kachel"),new("Bars","Balken","Große Pegelbalken für alle Werte"),new("OrbitGauge","Orbit","Rundinstrument mit Messwerten rechts"),new("TwinRings","Doppelring","Zwei konzentrische Ringe mit Messwerten rechts"),new("ArcGauge","Halbkreis","Kompaktes Halbkreis-Instrument mit klarer Werteliste"),new("SegmentGauge","Segmentring","Segmentiertes Rundinstrument mit Messwerten rechts"),new("SpeedGauge","Tachometer","Offener 270-Grad-Bogen mit Messwerten rechts"),new("ColumnGauge","Sensor-Säule","Senkrechte Sensor-Säule mit Messwerten rechts"),new("Console","Messpult","Kompaktes Messpult mit Segmentanzeige"),new("Digital","Digital","Digitale Hauptanzeige mit präziser Werteliste"),new("SideRail","Seitenbalken","Schlichte Messkarte mit seitlicher Akzentlinie"),new("HorseshoeGauge","Hufeisen","Offenes Rundinstrument mit Positionspunkt"),new("DotMatrix","Punktmatrix","LED-Punktmatrix mit digitalem Hauptwert"),new("Panorama","Panorama","Breite Hauptanzeige mit kompakter Werteliste"),new("Tape","Messstreifen","Vertikaler Messstreifen mit Skalenstrichen"),new("HexCore","Hex-Core","Sechseckiges Instrument mit Werteliste"),new("Bitfield","Bitfield","Digitale Hauptzahl mit echter 16-Bit-Darstellung"),new("Rackmount","Rackmount","Server-Panel mit zwei LED-Pegelreihen"),new("Fluent","Fluent","Weiche Flächen und klare Typografie"),new("Glass","Glass","Transparente Karten mit feinen Konturen"),new("Bento","Bento","Kompakte Messwert-Kacheln"),new("Precision","Precision","Präzise Skala und ausgerichtete Werte"),new("NeonEdge","Neon Edge","Lichtkonturen mit geometrischem Instrument"),new("OrbitStudio","Orbit Studio","Orbit-Instrument mit seitlichen Messwerten"),new("MetroMosaic","Metro Mosaic","Asymmetrische Messwert-Kacheln"),new("SensorMap","Sensor Map","Verbundene Sensorfelder um einen Chip"),new("SplitPanel","Split Panel","Geteilte Hardware- und Datenflächen"),new("Typographic","Typographic","Große Typografie mit ruhiger Werteliste"),new("Blueprint","Blueprint","Technische Zeichnung mit Messfeldern"),new("FluentUI","Fluent UI","Klare Fluent-Karten mit großer Hauptzahl"),new("FluentUICompact","Fluent UI Compact","Kompakte Fluent-Karten"),new("FluentUIHero","Fluent UI Hero","Große Hauptzahl und ruhige Messwertliste"),new("WidgetBoard","Widget Board","Helle Widget-Flächen mit kompakten Zusatzwerten"),new("CommandCenter","Command Center","Dashboard mit Glasflächen und Datenkacheln"),new("WidgetBoardBlack","Widget Board Black","Schwarze Referenz-Karten mit echtem 60-Sekunden-Verlauf")};
+ public static IReadOnlyList<CardLayout> All {get;}=Array.AsReadOnly(BaseLayouts);
+ public static CardLayout Get(string? key){if(key?.EndsWith(".Large",StringComparison.Ordinal)==true)key=key[..^6];return All.FirstOrDefault(l=>l.Key==key)??All[0];}
  public static string BaseLayout(string? key){string value=Get(key).Key;return value.EndsWith(".Large",StringComparison.Ordinal)?value[..^6]:value;}
- public static double ReadingMultiplier(string? key)=>Get(key).Key.EndsWith(".Large",StringComparison.Ordinal)?1.35:1;
+ public static double ReadingMultiplier(string? key)=>1;
  public static double SpaceMultiplier(Preferences prefs)=>prefs.ExpandMultiColumnReadings&&prefs.Columns>1?1.2:1;
  public static void PositionInstrument(Grid content,FrameworkElement? instrument,FrameworkElement readings,Preferences prefs)
  {
@@ -26,6 +26,7 @@ public static class CardLayouts
    instrument.LayoutTransform=new ScaleTransform(applied,applied);
    if(SpaceMultiplier(prefs)==1)content.ColumnDefinitions[0].Width=new GridLength(content.ColumnDefinitions[0].Width.Value*applied);
   }
+  if(prefs.Columns>1){readings.VerticalAlignment=VerticalAlignment.Stretch;if(instrument!=null)instrument.VerticalAlignment=VerticalAlignment.Center;}
   if(SpaceMultiplier(prefs)==1)return;
   content.ColumnDefinitions.Clear();content.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star)});
   content.RowDefinitions.Add(new(){Height=GridLength.Auto});content.RowDefinitions.Add(new(){Height=new GridLength(1,GridUnitType.Star)});
@@ -33,9 +34,13 @@ public static class CardLayouts
   if(instrument!=null){Grid.SetColumn(instrument,0);Grid.SetRow(instrument,0);instrument.HorizontalAlignment=HorizontalAlignment.Center;instrument.VerticalAlignment=VerticalAlignment.Top;instrument.Margin=new Thickness(0,0,0,8);}
  }
  public static Metric? MainMetric(Device device)=>device.Category=="Network"?device.Metrics.FirstOrDefault(m=>m.Unit!="IP"):device.Metrics.FirstOrDefault(m=>m.Unit=="°C" && m.Label.StartsWith("Temperatur",StringComparison.OrdinalIgnoreCase))??device.Metrics.FirstOrDefault(m=>m.Unit=="°C")??device.Metrics.FirstOrDefault();
- public static IHardwareCard Create(Device d,Preferences p)
+ public static IHardwareCard Create(Device d,Preferences p,MetricHistory? history=null)
  {
   string layout=BaseLayout(p.Layout);
+  if(layout=="WidgetBoardBlack")return new HistoryBoardCard(d,p,history??new MetricHistory());
+  if(layout is "FluentUI" or "FluentUICompact" or "FluentUIHero" or "WidgetBoard" or "CommandCenter")return new FluentHardwareCard(d,p);
+  if(layout is "MetroMosaic" or "SensorMap" or "SplitPanel" or "Typographic" or "Blueprint")return new SpatialHardwareCard(d,p);
+  if(layout is "Fluent" or "Glass" or "Bento" or "Precision" or "NeonEdge" or "OrbitStudio")return new ContemporaryHardwareCard(d,p);
   if(layout is "Console" or "Digital" or "SideRail" or "DotMatrix" or "Panorama" or "Tape" or "Bitfield" or "Rackmount")return new FavoriteHardwareCard(d,p);
   if(layout is "Gauges" or "OrbitGauge" or "TwinRings" or "ArcGauge" or "SegmentGauge" or "SpeedGauge" or "ColumnGauge" or "HorseshoeGauge" or "HexCore")return new RadialHardwareCard(d,p);
   if(layout is "Modern" or "Dashboard" or "Gauges" && MainMetric(d) is Metric primary)d=d with{Metrics=new[]{primary}.Concat(d.Metrics.Where(m=>m.Id!=primary.Id)).ToList()};
@@ -98,3 +103,8 @@ public sealed class AlternateHardwareCard:Border,IHardwareCard
   if(layout=="Gauges" && CardLayouts.MainMetric(device) is Metric first){string formatted=first.Display(prefs.Fahrenheit);int split=formatted.LastIndexOf(' ');if(gaugeNumber!=null)gaugeNumber.Text=split>=0?formatted.Substring(0,split):formatted;if(gaugeUnit!=null)gaugeUnit.Text=split>=0?formatted.Substring(split+1):first.Unit;if(!first.Value.HasValue){arc.Data=null;return;}double ratio=Math.Clamp(first.Value.Value/Math.Max(1,first.Maximum),0,.99999),angle=ratio*Math.PI*2;var figure=new PathFigure{StartPoint=new Point(50,9),IsClosed=false};figure.Segments.Add(new ArcSegment(new Point(50+41*Math.Sin(angle),50-41*Math.Cos(angle)),new Size(41,41),0,ratio>.5,SweepDirection.Clockwise,true));arc.Data=new PathGeometry(new[]{figure});}
  }
 }
+
+
+
+
+

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -71,6 +71,7 @@ public sealed class Preferences
             p.TextFontFamily = p.TextFontFamily?.Trim() ?? "";
             using var document=JsonDocument.Parse(json);
             if(!document.RootElement.TryGetProperty("Layout",out _))p.Layout=p.Theme switch {"Original"=>"Original","Compact" or "Terminal"=>"Compact","Minimal"=>"Text",_=>"Modern"};
+            if(p.Layout?.EndsWith(".Large",StringComparison.Ordinal)==true)p.Layout=p.Layout[..^6];
             p.ColumnWidth = double.IsFinite(p.ColumnWidth)?Math.Clamp(p.ColumnWidth, 50, 440):290;
             p.Columns = Math.Clamp(p.Columns, 1, 4);
             p.Opacity = Math.Clamp(p.Opacity, 0, 1);
@@ -132,3 +133,4 @@ public record Metric(string Id, string Label, double? Value, string Unit, double
 public record Device(string Id, string Category, string Name, List<Metric> Metrics, bool DefaultVisible = true);
 public record SensorRow(string Id, string Device, string Name, string Kind, double? Value, string Unit,string HardwareKind="");
 public record Snapshot(List<Device> Devices, List<SensorRow> Sensors, List<string> Warnings, DateTime Time);
+

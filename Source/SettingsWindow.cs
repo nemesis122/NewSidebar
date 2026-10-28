@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -10,14 +10,14 @@ using Microsoft.Win32;
 using Forms = System.Windows.Forms;
 
 namespace Aurora;
-public sealed class SettingsWindow : Window
+public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
 {
     private readonly SidebarWindow sidebar;
     private readonly System.Threading.CancellationTokenSource addressCancellation=new();
     private bool addressBusy;
     private readonly NetworkAddressLookup addressLookup;
     private Preferences P => sidebar.Prefs;
-    private readonly StackPanel page = new() { Margin = new Thickness(20,16,20,16) };
+    private readonly StackPanel page = new() { Margin = new Thickness(20,9,20,9) };
     private readonly TextBlock subtitle = Ui.Text("",13,"Muted");
     private readonly TextBox search = new() { Padding = new Thickness(10,8,10,8), Margin = new Thickness(0,0,0,12) };
     private readonly ListView sensorList = new() { MinHeight = 200, MaxHeight = 300 };
@@ -35,6 +35,7 @@ public sealed class SettingsWindow : Window
     private string current = "Position";
     public SettingsWindow(SidebarWindow sidebar,NetworkAddressLookup? networkLookup=null)
     {
+        Resources.MergedDictionaries.Add(FluentSurface.Resources);ExtendsContentIntoTitleBar=true;WindowBackdropType=Wpf.Ui.Controls.WindowBackdropType.Mica;
         this.sidebar = sidebar;addressLookup=networkLookup??new NetworkAddressLookup();
         SetResourceReference(FontFamilyProperty,"AppFont");
         Closed+=(_,_)=>addressCancellation.Cancel();
@@ -46,10 +47,10 @@ public sealed class SettingsWindow : Window
         CompactStyle(typeof(CheckBox),new Setter(MarginProperty,new Thickness(0,3,0,3)),new Setter(FontSizeProperty,12d));
         CompactStyle(typeof(Slider),new Setter(MarginProperty,new Thickness(0,2,0,2)));
         SetResourceReference(BackgroundProperty,"Back"); SetResourceReference(ForegroundProperty,"Text");
-        Title = "Sidebar by NemeSIS · Einstellungen"; Width = 860; Height = 650; MinWidth = 800; MinHeight = 560;
+        Title = "Sidebar by NemeSIS · Einstellungen"; Width = 980; Height = 760; MinWidth = 800; MinHeight = 560;
         ShowInTaskbar=false;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        var layout = new Grid();layout.SetResourceReference(Panel.BackgroundProperty,"Back"); layout.ColumnDefinitions.Add(new() { Width = new GridLength(195) }); layout.ColumnDefinitions.Add(new() { Width = new GridLength(1,GridUnitType.Star) });
+        var layout = new Grid();layout.SetResourceReference(Panel.BackgroundProperty,"Back"); layout.ColumnDefinitions.Add(new() { Width = new GridLength(210) }); layout.ColumnDefinitions.Add(new() { Width = new GridLength(1,GridUnitType.Star) });
         var left = new DockPanel(); left.SetResourceReference(Panel.BackgroundProperty,"Panel");
         var logo = new StackPanel { Margin = new Thickness(23,20,12,10) };
         logo.Children.Add(Ui.Text("Sidebar by NemeSIS",15,"Accent")); logo.Children.Add(Ui.Text("DEIN SYSTEM. IM BLICK.",9,"Muted")); DockPanel.SetDock(logo,Dock.Top); left.Children.Add(logo);
@@ -60,7 +61,7 @@ public sealed class SettingsWindow : Window
         languages.SelectionChanged+=(_,_)=>{if(languages.SelectedItem is SettingsLanguage choice){P.SettingsLanguage=choice.Key;SettingsText.CurrentLanguage=choice.Key;P.Save();Navigate(current);}};DockPanel.SetDock(languagePanel,Dock.Bottom);left.Children.Add(languagePanel);
         nav.SelectionChanged += (_,_) => { if(nav.SelectedItem is ListBoxItem i && i.Tag is string key) Navigate(key); };
         left.Children.Add(nav); layout.Children.Add(left);
-        pageScroll.Content=page;Grid.SetColumn(pageScroll,1);layout.Children.Add(pageScroll);Content=layout;
+        pageScroll.Content=page;Grid.SetColumn(pageScroll,1);layout.Children.Add(pageScroll);var shell=new Grid();shell.RowDefinitions.Add(new(){Height=new GridLength(32)});shell.RowDefinitions.Add(new(){Height=new GridLength(1,GridUnitType.Star)});var titleBar=new Wpf.Ui.Controls.TitleBar{ButtonsForeground=Ui.Brush("#ECF2FA"),Foreground=Ui.Brush("#ECF2FA"),Title="Sidebar by NemeSIS",ShowMinimize=true,ShowMaximize=true};titleBar.SetResourceReference(Control.BackgroundProperty,"Back");shell.Children.Add(titleBar);Grid.SetRow(layout,1);shell.Children.Add(layout);Content=shell;
         var gridView = new GridView();
         var pinFactory=new FrameworkElementFactory(typeof(CheckBox));pinFactory.SetBinding(CheckBox.IsCheckedProperty,new System.Windows.Data.Binding("Pinned"){Mode=System.Windows.Data.BindingMode.TwoWay,UpdateSourceTrigger=System.Windows.Data.UpdateSourceTrigger.PropertyChanged});pinFactory.SetValue(CheckBox.HorizontalAlignmentProperty,HorizontalAlignment.Center);pinFactory.SetValue(CheckBox.ToolTipProperty,"Häkchen = in Eigene Werte hinzugefügt. Zum Entfernen Häkchen ausschalten.");
         gridView.Columns.Add(new GridViewColumn {Header="Hinzugefügt",Width=88,CellTemplate=new DataTemplate{VisualTree=pinFactory}});
@@ -106,7 +107,7 @@ public sealed class SettingsWindow : Window
     }
     private void SettingRow(string label,FrameworkElement control)
     {
-        var row=new Grid {Margin=new Thickness(0,3,0,3),MinHeight=32};row.ColumnDefinitions.Add(new(){Width=new GridLength(185)});row.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star),MaxWidth=440});
+        var row=new Grid {Margin=new Thickness(0,3,0,3),MinHeight=30};row.ColumnDefinitions.Add(new(){Width=new GridLength(185)});row.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star),MaxWidth=440});
         var text=Ui.Text(label,12,"Muted");text.TextWrapping=TextWrapping.Wrap;text.Margin=new Thickness(0,0,12,0);text.VerticalAlignment=VerticalAlignment.Center;row.Children.Add(text);Grid.SetColumn(control,1);control.HorizontalAlignment=HorizontalAlignment.Stretch;control.VerticalAlignment=VerticalAlignment.Center;row.Children.Add(control);page.Children.Add(row);
     }
     private void Navigate(string target)
@@ -273,6 +274,7 @@ public sealed class SettingsWindow : Window
         }
         SettingsText.Apply(this,P.SettingsLanguage);
     }
+    public void SelectDevice(string deviceId){selectedDeviceId=deviceId;SelectPage("Geräte");Navigate("Geräte");}
     private void DevicePage()
     {
         if(sidebar.Latest==null){Note("Sensoren werden erkannt …");return;}
@@ -327,7 +329,7 @@ public sealed class SettingsWindow : Window
     {
         int start=page.Children.Count;build();var body=new StackPanel();var heading=Ui.Text(title,13);heading.FontWeight=FontWeights.SemiBold;heading.Margin=new Thickness(0,0,0,5);body.Children.Add(heading);
         var children=page.Children.Cast<UIElement>().Skip(start).ToArray();foreach(var child in children){page.Children.Remove(child);body.Children.Add(child);}
-        var frame=new Border{Child=body,Padding=new Thickness(12,9,12,9),Margin=new Thickness(0,0,0,8),CornerRadius=new CornerRadius(6),BorderThickness=new Thickness(1)};frame.SetResourceReference(Border.BackgroundProperty,"Panel");frame.SetResourceReference(Border.BorderBrushProperty,"Edge");page.Children.Add(frame);
+        var frame=new Wpf.Ui.Controls.Card{Content=body,Padding=new Thickness(14,8,14,8),Margin=new Thickness(0,0,0,8),BorderThickness=new Thickness(1),HorizontalContentAlignment=HorizontalAlignment.Stretch};frame.SetResourceReference(Control.BackgroundProperty,"Panel");frame.SetResourceReference(Control.BorderBrushProperty,"Edge");page.Children.Add(frame);
     }
     private void Section(string title,bool expanded,Action build)
     {
@@ -492,3 +494,8 @@ public sealed class SettingsWindow : Window
         public SensorDisplay(string id,string device,string name,string kind,string display,bool pinned,Action<string,bool> change,string widget) { Id=id; Device=device; Name=name; Kind=kind; this.display=display;this.pinned=pinned;this.change=change;this.widget=widget; }
     }
 }
+
+
+
+
+

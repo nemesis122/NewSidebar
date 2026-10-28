@@ -78,7 +78,7 @@ public sealed class HardwareCardGrid:Panel
  protected override Size ArrangeOverride(Size finalSize)
  {
   double total=0;foreach(double row in rows)total+=row;double extra=rows.Count>0?Math.Max(0,finalSize.Height-total)/rows.Count:0;double top=0;int columns=Math.Clamp(Columns,1,4),rowIndex=0;
-  for(int start=0;start<InternalChildren.Count;start+=columns){int count=Math.Min(columns,InternalChildren.Count-start);double height=(rowIndex<rows.Count?rows[rowIndex]:0)+extra;for(int i=0;i<count;i++)InternalChildren[start+i].Arrange(new Rect(i*finalSize.Width/count,top,finalSize.Width/count,height));top+=height;rowIndex++;}
+  for(int start=0;start<InternalChildren.Count;start+=columns){int count=Math.Min(columns,InternalChildren.Count-start);double height=(rowIndex<rows.Count?rows[rowIndex]:0)+extra;for(int i=0;i<count;i++){var child=InternalChildren[start+i];if(child is FrameworkElement view){view.SetCurrentValue(FrameworkElement.VerticalAlignmentProperty,VerticalAlignment.Stretch);view.SetCurrentValue(FrameworkElement.HorizontalAlignmentProperty,HorizontalAlignment.Stretch);}child.Arrange(new Rect(i*finalSize.Width/count,top,finalSize.Width/count,height));}top+=height;rowIndex++;}
   return finalSize;
  }
 }

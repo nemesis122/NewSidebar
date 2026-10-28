@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -49,6 +49,17 @@ public static class SettingsText
  private sealed class ChoiceConverter:IValueConverter
  {public object Convert(object value,Type target,object parameter,CultureInfo culture)=>Translate(value?.ToString()??"",CurrentLanguage);public object ConvertBack(object value,Type target,object parameter,CultureInfo culture)=>Binding.DoNothing;}
  private const string Data="""
+Asymmetrische Messwert-Kacheln|Asymmetric reading tiles|Tuiles de mesures asymétriques|Riquadri asimmetrici delle misure|Mosaicos asimétricos de lecturas|Mosaicos assimétricos de leituras
+Verbundene Sensorfelder um einen Chip|Connected sensor fields around a chip|Champs de capteurs reliés à une puce|Campi sensore collegati a un chip|Campos de sensores conectados a un chip|Campos de sensores ligados a um chip
+Geteilte Hardware- und Datenflächen|Split hardware and data surfaces|Surfaces séparées pour matériel et données|Superfici separate per hardware e dati|Superficies separadas de hardware y datos|Superfícies separadas de hardware e dados
+Große Typografie mit ruhiger Werteliste|Large typography with a clean reading list|Grande typographie et liste de mesures claire|Tipografia grande e lista di valori chiara|Tipografía grande y lista de valores clara|Tipografia grande e lista de valores clara
+Technische Zeichnung mit Messfeldern|Technical drawing with reading fields|Dessin technique avec champs de mesures|Disegno tecnico con campi di misura|Dibujo técnico con campos de lectura|Desenho técnico com campos de leitura
+Weiche Flächen und klare Typografie|Soft surfaces and clear typography|Surfaces douces et typographie claire|Superfici morbide e testo chiaro|Superficies suaves y tipografía clara|Superfícies suaves e tipografia clara
+Transparente Karten mit feinen Konturen|Transparent cards with fine outlines|Cartes transparentes aux contours fins|Schede trasparenti con contorni sottili|Tarjetas transparentes con bordes finos|Cartões transparentes com contornos finos
+Kompakte Messwert-Kacheln|Compact reading tiles|Tuiles de mesures compactes|Riquadri compatti delle misure|Mosaicos compactos de lecturas|Mosaicos compactos de leituras
+Präzise Skala und ausgerichtete Werte|Precise scale and aligned readings|Échelle précise et mesures alignées|Scala precisa e valori allineati|Escala precisa y valores alineados|Escala precisa e valores alinhados
+Lichtkonturen mit geometrischem Instrument|Light outlines with a geometric instrument|Contours lumineux et instrument géométrique|Bordi luminosi e strumento geometrico|Bordes luminosos e instrumento geométrico|Contornos luminosos e instrumento geométrico
+Orbit-Instrument mit seitlichen Messwerten|Orbital instrument with side readings|Instrument orbital et mesures latérales|Strumento orbitale e misure laterali|Instrumento orbital y lecturas laterales|Instrumento orbital e leituras laterais
 Schriftart (gesamter Text)|Font family (all text)|Police (tout le texte)|Carattere (tutto il testo)|Fuente (todo el texto)|Tipo de letra (todo o texto)
 Standard (Design)|Default (design)|Par défaut (style)|Predefinito (design)|Predeterminada (diseño)|Predefinido (design)
 Gilt für Sidebar und Einstellungen. Neue Schriften zuerst in Windows installieren und die Sidebar neu starten.|Applies to the sidebar and settings. Install new fonts in Windows first, then restart the sidebar.|S’applique à la barre et aux paramètres. Installez les nouvelles polices dans Windows, puis redémarrez la barre.|Si applica alla barra e alle impostazioni. Installa nuovi caratteri in Windows e riavvia la barra.|Se aplica a la barra y a los ajustes. Instala nuevas fuentes en Windows y reinicia la barra.|Aplica-se à barra e às definições. Instale novas fontes no Windows e reinicie a barra.
@@ -259,5 +270,13 @@ Zugriff fehlgeschlagen|Access failed|Échec d’accès|Accesso non riuscito|Erro
 Sidebar mit Administratorrechten neu starten.|Restart the sidebar with administrator access.|Redémarrez la barre avec les droits administrateur.|Riavvia la barra con diritti amministratore.|Reinicia la barra con permisos de administrador.|Reinicie a barra com permissões de administrador.
 Treiber-/Modulkompatibilität prüfen.|Check driver/module compatibility.|Vérifiez la compatibilité pilote/module.|Verifica compatibilità driver/modulo.|Comprueba compatibilidad del controlador/módulo.|Verifique a compatibilidade do controlador/módulo.
 PawnIO ist nicht installiert. CPU-Temperaturen und weitere Hardware-Sensoren benötigen diesen Sensortreiber.|PawnIO is not installed. CPU temperatures and other hardware sensors require it.|PawnIO n’est pas installé. Les températures CPU et d’autres capteurs en ont besoin.|PawnIO non è installato. Temperature CPU e altri sensori lo richiedono.|PawnIO no está instalado. La temperatura CPU y otros sensores lo requieren.|O PawnIO não está instalado. A temperatura CPU e outros sensores precisam dele.
+Klare Fluent-Karten mit großer Hauptzahl|Clean Fluent cards with a large primary reading|Cartes Fluent avec une grande valeur principale|Schede Fluent con valore principale grande|Tarjetas Fluent con valor principal grande|Cartões Fluent com valor principal grande
+Kompakte Fluent-Karten|Compact Fluent cards|Cartes Fluent compactes|Schede Fluent compatte|Tarjetas Fluent compactas|Cartões Fluent compactos
+Große Hauptzahl und ruhige Messwertliste|Large primary reading with a clear reading list|Grande valeur principale et liste claire|Valore principale grande ed elenco chiaro|Valor principal grande y lista clara|Valor principal grande e lista clara
+Helle Widget-Flächen mit kompakten Zusatzwerten|Light widget surfaces with compact details|Widgets clairs avec détails compacts|Widget chiari con dettagli compatti|Widgets claros con detalles compactos|Widgets claros com detalhes compactos
+Dashboard mit Glasflächen und Datenkacheln|Dashboard with glass surfaces and data tiles|Tableau de bord avec surfaces en verre et tuiles de données|Dashboard con superfici in vetro e riquadri dati|Panel con superficies de cristal y mosaicos de datos|Painel com superfícies de vidro e blocos de dados
+Schwarze Referenz-Karten mit echtem 60-Sekunden-Verlauf|Black reference cards with real 60-second history|Cartes noires avec historique réel de 60 secondes|Schede nere con cronologia reale di 60 secondi|Tarjetas negras con historial real de 60 segundos|Cartões pretos com histórico real de 60 segundos
 """;
 }
+
+

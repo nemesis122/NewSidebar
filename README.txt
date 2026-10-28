@@ -1,26 +1,23 @@
-Sidebar by NemeSIS v2.12.2 — Portable startup & path repair
+Sidebar by NemeSIS v2.14.3 — Full-height layouts & live history
 
-Opening this portable EXE no longer redirects to an unrelated copy in another folder.
-An existing startup task can be moved to the selected EXE and its directory with a
-one-time Windows administrator approval. Startup on/off and logon delay are preserved.
-Declining approval still opens the selected copy with standard-user sensor access.
-System information separates Running EXE and Startup EXE and reads the actual version.
-Startup failures are reported with a diagnostic log.
+Cards in 2–4 columns fill their row. Readings and tiles use spare height independently
+of graph position, without changing selected font and graphic sizes. Fluent cards no
+longer center shorter surfaces inside taller row slots. Glass decorative ticks removed.
 
-Exit older copies before upgrading. Keep aurora-settings.json beside the chosen EXE
-to preserve preferences. On a fresh PC, configure sensor access and startup in Settings;
-no new task is created automatically. Some sensors need PawnIO and administrator access.
-Windows 10/11 x64. .NET 8.0.32 is bundled. No application installer is required.
+Since v2.12.2: integrated WPF UI settings, new Fluent/spatial/dashboard layouts, and
+Widget Board Black with filled 60-second live history. History stays in memory, ignores
+duplicate snapshots and leaves gaps for unavailable readings. No fabricated warm-up data.
 
-Includes custom hardware names, installed font selection, six independent text size
-controls, whole-graphic scaling, widget-background opacity, 48 layouts, 14 color themes,
-1–4 columns, per-device readings, own sensors, and manually refreshed optional IPs.
-Settings: de/en/fr/it/es/pt; sidebar labels remain English.
+41 normal layouts and 14 color themes. Large-reading duplicates removed; saved selections
+migrate to their normal counterpart. Independent text/graphic size sliders remain.
 
-Validation: 92 data/startup checks, 25,924 native checks, 2,688 render combinations.
-Task relocation was tested on an unregistered Windows task definition. Full Windows
-approval/logon validation on the second PC remains outstanding. Sensor availability
-depends on hardware, motherboard, drivers and permissions; not all hardware was tested.
+Validation: 102 data/startup/history checks; 47,247 native UI checks; 2,296 render combinations.
+All 41 designs additionally rendered with eight simulated devices. Packaged version2.14.3.0.
 
-See README.md for settings and build instructions. Build on Windows with the .NET 8 SDK
-and Build-Portable.ps1. Dependency notices are in Licenses/ and THIRD-PARTY-NOTICES.txt.
+Windows 10/11 x64. .NET 8.0.32 bundled. Exit older copies, keep aurora-settings.json beside
+the new EXE in a writable folder, and start the new EXE. Moving an existing startup task
+may require one Windows approval. Some sensors need PawnIO and administrator access.
+Hardware readings depend on model, firmware, drivers and permissions.
+
+See README.md for controls, installation and build instructions. Third-party notices and
+licenses are supplied with the source. Preview images contain simulated data only.

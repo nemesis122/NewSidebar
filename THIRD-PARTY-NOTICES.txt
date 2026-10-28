@@ -1,4 +1,4 @@
-Aurora Sidebar — Abhängigkeiten und Lizenzhinweise
+Sidebar by NemeSIS — Dependencies and license notices
 BlackSharp.Core/1.0.7 | MPL-2.0 | https://github.com/Blacktempel/BlackSharp
 DiskInfoToolkit/1.1.2 | MPL-2.0 | https://github.com/Blacktempel/DiskInfoToolkit
 HidSharp/2.6.4 | LICENSE.txt | https://software.seekye.com/hidsharp
@@ -26,5 +26,9 @@ System.CodeDom/10.0.2 | MIT | https://dot.net/
 System.IO.Ports/10.0.3 | MIT | https://dot.net/
 System.Management/10.0.2 | MIT | https://dot.net/
 System.Threading.AccessControl/10.0.3 | MIT | https://dot.net/
-LibreHardwareMonitor: MPL-2.0. Lizenz: https://www.mozilla.org/MPL/2.0/
-Unveränderte Sensorbibliothek; zugehöriger Quellcode: https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/tree/3d331e3370efb858411f19511373eff65a218701
+LibreHardwareMonitor: MPL-2.0. License: https://www.mozilla.org/MPL/2.0/
+Unmodified sensor library; corresponding source: https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/tree/3d331e3370efb858411f19511373eff65a218701
+
+WPF-UI/4.3.0 | MIT | https://github.com/lepoco/wpfui
+WPF-UI.Abstractions/4.3.0 | MIT | https://github.com/lepoco/wpfui
+See Licenses/WPF-UI-LICENSE.md and Licenses/WPF-UI-ThirdPartyNotices.txt.

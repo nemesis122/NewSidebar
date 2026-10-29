@@ -32,3 +32,9 @@ Unmodified sensor library; corresponding source: https://github.com/LibreHardwar
 WPF-UI/4.3.0 | MIT | https://github.com/lepoco/wpfui
 WPF-UI.Abstractions/4.3.0 | MIT | https://github.com/lepoco/wpfui
 See Licenses/WPF-UI-LICENSE.md and Licenses/WPF-UI-ThirdPartyNotices.txt.
+
+Open Hardware Monitor driverless subset | MPL-2.0 | https://github.com/HardwareMonitor/OpenHardwareMonitor
+Modified source based on version 1.0.9513, commit 3f6b9b14cf4780281b4771ffc793ea0660138f91.
+Corresponding modified source is included under OpenHardwareMonitor.Driverless/ in the source archive.
+No WinRing0 or InpOut payloads are included. CPU/mainboard access uses the existing LibreHardwareMonitor/PawnIO bridge.
+See Licenses/OpenHardwareMonitor-MPL-2.0.txt and Licenses/OpenHardwareMonitor-MODIFICATIONS.md.

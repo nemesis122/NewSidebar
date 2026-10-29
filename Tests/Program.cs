@@ -8,6 +8,11 @@ if(OperatingSystem.IsWindows() && args.Length==2 && args[0]=="--signal-startup-i
 }
 int passed=0;
 void Require(bool condition,string label) { if(!condition) throw new Exception(label); Console.WriteLine("PASS "+label); passed++; }
+Require(JsonSerializer.Deserialize<Preferences>("{}")!.SensorSource==SensorSources.Libre,"Existing configurations keep Libre as the default");
+Require(JsonSerializer.Deserialize<Preferences>(JsonSerializer.Serialize(new Preferences{SensorSource=SensorSources.OpenPawn}))!.SensorSource==SensorSources.OpenPawn,"Embedded source selection survives restart");
+Require(SensorSources.Normalize("invalid")==SensorSources.Libre,"Unknown sources normalize to Libre");
+Require(SensorSources.OpenId("/cpu/0")!=SensorSources.BridgeId("/cpu/0"),"Direct and bridge sensor IDs are distinct");
+Require(SensorSources.Finite(double.NaN)==null&&SensorSources.Finite(double.PositiveInfinity)==null&&SensorSources.Finite(0)==0,"Invalid sensor numbers stay unavailable while zero remains valid");
 string portableRoot=Path.Combine(Path.GetTempPath(),"NemeSIS-startup-tests-"+Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(Path.Combine(portableRoot,"OEM"));Directory.CreateDirectory(Path.Combine(portableRoot,"Downloads"));
 string oemExe=Path.Combine(portableRoot,"OEM","Sidebar.exe"),downloadExe=Path.Combine(portableRoot,"Downloads","Sidebar.exe");
@@ -136,6 +141,7 @@ Require(new Metric("negative","Temperature",-3.7,"°C").Display(false)=="-3 °C"
 Require(new Metric("ip","IP",null,"IP",TextValue:"192.168.0.119").Display(false)=="192.168.0.119","Text and IP addresses preserve punctuation");
 
 
+var roleFlags=new[]{"ShowWidgetTitles","ShowHardwareNames","ShowLabels","ShowReadings","ShowInstrumentNumbers","ShowInstrumentUnits"};File.WriteAllText(Preferences.Path,"{}");var legacyVisibility=Preferences.Load();Require(roleFlags.All(name=>(bool)typeof(Preferences).GetProperty(name)!.GetValue(legacyVisibility)!),"Old configurations keep all sidebar text visible by default");foreach(var name in roleFlags){var p=new Preferences();typeof(Preferences).GetProperty(name)!.SetValue(p,false);p.Save();var read=Preferences.Load();Require(roleFlags.All(other=>(bool)typeof(Preferences).GetProperty(other)!.GetValue(read)! == (other!=name)),"Text visibility persists independently: "+name);}var allHidden=new Preferences{ShowWidgetTitles=false,ShowHardwareNames=false,ShowLabels=false,ShowReadings=false,ShowInstrumentNumbers=false,ShowInstrumentUnits=false};allHidden.Save();Require(roleFlags.All(name=>!(bool)typeof(Preferences).GetProperty(name)!.GetValue(Preferences.Load())!),"All hidden text choices survive restart");
 Console.WriteLine($"{passed} total checks passed");
 sealed class AddressHandler:System.Net.Http.HttpMessageHandler{
  public int Calls;public bool Fail;public bool Slow;public string Reply="203.0.113.99";

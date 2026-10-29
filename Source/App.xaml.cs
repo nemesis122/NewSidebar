@@ -57,7 +57,7 @@ public partial class App : Application
         int verify=Array.IndexOf(e.Args,"--verify-portable");
         if(verify>=0 && verify+1<e.Args.Length)
         {
-            File.WriteAllText(e.Args[verify+1],System.Text.Json.JsonSerializer.Serialize(new{Version=typeof(App).Assembly.GetName().Version!.ToString(),Executable=Environment.ProcessPath,Settings=Preferences.Path,Runtime=Environment.Version.ToString(),SensorLibrary=typeof(LibreHardwareMonitor.Hardware.Computer).Assembly.GetName().Version!.ToString(),CpuTemperature=CpuTemperatureSelector.Select("/cpu/0",new[]{new SensorRow("/board/cpu","Board","CPU","Temperature",50,"°C","SuperIO")},null)?.Value}));
+            File.WriteAllText(e.Args[verify+1],System.Text.Json.JsonSerializer.Serialize(new{Version=typeof(App).Assembly.GetName().Version!.ToString(),Executable=Environment.ProcessPath,Settings=Preferences.Path,Runtime=Environment.Version.ToString(),SensorLibrary=typeof(LibreHardwareMonitor.Hardware.Computer).Assembly.GetName().Version!.ToString(),OpenSensorLibrary=typeof(OpenHardwareMonitor.Hardware.DriverlessComputer).Assembly.GetName().Version!.ToString(),OpenSensorResources=typeof(OpenHardwareMonitor.Hardware.DriverlessComputer).Assembly.GetManifestResourceNames(),SensorSources=SensorSources.All.Select(s=>s.Key).ToArray(),CpuTemperature=CpuTemperatureSelector.Select("/cpu/0",new[]{new SensorRow("/board/cpu","Board","CPU","Temperature",50,"°C","SuperIO")},null)?.Value}));
             Shutdown();return;
         }
         int waiting = Array.IndexOf(e.Args,"--wait-for-exit");

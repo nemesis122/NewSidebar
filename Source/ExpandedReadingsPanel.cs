@@ -18,7 +18,7 @@ public sealed class ExpandedReadingsPanel : StackPanel
   var children=InternalChildren.Cast<UIElement>().Where(c=>c.Visibility!=Visibility.Collapsed).ToArray();
   double natural=children.Sum(c=>c.DesiredSize.Height),extra=Math.Max(0,size.Height-natural);
   if(extra<.5)return base.ArrangeOverride(size);
-  int fixedCount=Math.Min(FixedChildren,children.Length);
+  int fixedCount=InternalChildren.Cast<UIElement>().Take(FixedChildren).Count(c=>c.Visibility!=Visibility.Collapsed);
   // A nested readings grid gets the remaining height; its rows then spread inside it.
   int container=-1;
   for(int i=fixedCount;i<children.Length;i++)if(children[i] is ExpandedReadingsPanel or UniformGrid || children[i] is Grid grid && (children.Length-fixedCount==1 || grid.RowDefinitions.Any(row=>row.Height.IsStar)))container=i;

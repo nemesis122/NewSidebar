@@ -38,9 +38,9 @@ public sealed class SpatialHardwareCard:Border,IHardwareCard
   body.Children.Add(new Viewbox{Stretch=Stretch.Uniform,StretchDirection=StretchDirection.DownOnly,HorizontalAlignment=HorizontalAlignment.Left,Child=heading});
   var name=Ui.HardwareTitle(device.Name,11*scale*Preferences.TextFactor(p.HardwareTextScale),p.HardwareNames.ContainsKey(device.Id));name.TextWrapping=TextWrapping.Wrap;name.TextTrimming=TextTrimming.None;name.Margin=new(0,4,0,10);body.Children.Add(name);
   var readings=new ExpandedReadingsPanel(p);body.Children.Add(readings);
-  number=Ui.Text("—",(layout=="Typographic"?58:35)*p.FontScale*Preferences.TextFactor(p.InstrumentTextScale));number.Foreground=Ui.ValueBrush(p,accent);number.FontFamily=Ui.Font(p,"Cascadia Mono, Consolas");number.FontWeight=FontWeights.SemiBold;number.TextTrimming=TextTrimming.None;
+  number=Ui.RoleText(SidebarTextRole.InstrumentNumbers,"—",(layout=="Typographic"?58:35)*p.FontScale*Preferences.TextFactor(p.InstrumentTextScale));number.Foreground=Ui.ValueBrush(p,accent);number.FontFamily=Ui.Font(p,"Cascadia Mono, Consolas");number.FontWeight=FontWeights.SemiBold;number.TextTrimming=TextTrimming.None;
   System.Windows.Automation.AutomationProperties.SetAutomationId(number,"PrimaryMetric");
-  unit=Ui.Text("",11*p.FontScale*Preferences.TextFactor(p.UnitTextScale),"Muted");
+  unit=Ui.RoleText(SidebarTextRole.InstrumentUnits,"",11*p.FontScale*Preferences.TextFactor(p.UnitTextScale),"Muted");
   surface=new RatioSurface(layout,accent,design.Track,DesignCatalog.GraphSize(p),p.Opacity);
   primaryId=CardLayouts.MainMetric(device)?.Id;
   FrameworkElement Hero(bool tile=false)
@@ -91,7 +91,7 @@ public sealed class SpatialHardwareCard:Border,IHardwareCard
     if(layout=="Blueprint")
     {
      var grid=new Grid();grid.ColumnDefinitions.Add(new(){Width=new(27*scale)});grid.ColumnDefinitions.Add(new(){Width=new(1,GridUnitType.Star)});
-     var order=Ui.Text((++index).ToString("00"),8*scale*Preferences.TextFactor(p.LabelTextScale),"Muted");order.VerticalAlignment=VerticalAlignment.Center;grid.Children.Add(order);Grid.SetColumn(row,1);grid.Children.Add(row);readings.Children.Add(grid);
+     var order=Ui.RoleText(SidebarTextRole.Labels,(++index).ToString("00"),8*scale*Preferences.TextFactor(p.LabelTextScale),"Muted");order.VerticalAlignment=VerticalAlignment.Center;grid.Children.Add(order);Grid.SetColumn(row,1);grid.Children.Add(row);readings.Children.Add(grid);
     }
     else readings.Children.Add(row);
    }
@@ -101,7 +101,7 @@ public sealed class SpatialHardwareCard:Border,IHardwareCard
  private Border Cell(Metric metric,bool tile)
  {
   var label=Ui.SidebarText(metric.Label,10*scale*Preferences.TextFactor(prefs.LabelTextScale),"Muted");label.TextWrapping=TextWrapping.Wrap;
-  var value=Ui.Text("—",(tile?15:12)*scale*Preferences.TextFactor(prefs.ValueTextScale));value.FontFamily=Ui.Font(prefs,"Cascadia Mono, Consolas");value.Foreground=Ui.ValueBrush(prefs,design.Text);value.TextTrimming=TextTrimming.None;if(tile||metric.Unit=="IP")value.TextWrapping=TextWrapping.Wrap;values[metric.Id]=value;
+  var value=Ui.RoleText(SidebarTextRole.Readings,"—",(tile?15:12)*scale*Preferences.TextFactor(prefs.ValueTextScale));value.FontFamily=Ui.Font(prefs,"Cascadia Mono, Consolas");value.Foreground=Ui.ValueBrush(prefs,design.Text);value.TextTrimming=TextTrimming.None;if(tile||metric.Unit=="IP")value.TextWrapping=TextWrapping.Wrap;values[metric.Id]=value;
   Panel row;if(tile){var vertical=new StackPanel{VerticalAlignment=VerticalAlignment.Center};vertical.Children.Add(label);value.Margin=new(0,5,0,0);vertical.Children.Add(value);row=vertical;}else row=new RadialHardwareCard.ReadoutPanel(label,value,12*scale*Preferences.TextFactor(prefs.ValueTextScale));
   return new Border{Child=row,Padding=new(tile?8:0,tile?7:5,tile?8:0,tile?7:5),Margin=new(tile?3:0),Background=tile?Tint(design.Track,.55*prefs.Opacity):null,BorderBrush=Ui.Brush(layout=="Blueprint"?accent:design.Edge),BorderThickness=new(tile?1:0,0,tile?1:0,1),CornerRadius=new(layout=="SensorMap"?8:0)};
  }

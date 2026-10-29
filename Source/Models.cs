@@ -5,8 +5,12 @@ using System.Text.Json;
 
 namespace Aurora;
 
+public enum SidebarTextRole { None,WidgetTitles,HardwareNames,Labels,Readings,InstrumentNumbers,InstrumentUnits }
+
 public sealed class Preferences
 {
+    public string SensorSource {get;set;}=SensorSources.Libre;
+    public List<string> SeededSourceDevices {get;set;}=new();
     public Dictionary<string,string> HardwareNames { get; set; } = new();
     public string TextFontFamily { get; set; } = "";
     public string HardwareName(string deviceId,string originalName) => HardwareNames.TryGetValue(deviceId,out var name) && !string.IsNullOrWhiteSpace(name) ? name : originalName;
@@ -20,6 +24,13 @@ public sealed class Preferences
     public double ColumnWidth { get; set; } = 290;
     public int Columns { get; set; } = 1;
     public bool ExpandMultiColumnReadings { get; set; }
+    public bool ShowWidgetTitles {get;set;}=true;
+    public bool ShowHardwareNames {get;set;}=true;
+    public bool ShowLabels {get;set;}=true;
+    public bool ShowReadings {get;set;}=true;
+    public bool ShowInstrumentNumbers {get;set;}=true;
+    public bool ShowInstrumentUnits {get;set;}=true;
+    public bool IsTextVisible(SidebarTextRole role)=>role switch{SidebarTextRole.WidgetTitles=>ShowWidgetTitles,SidebarTextRole.HardwareNames=>ShowHardwareNames,SidebarTextRole.Labels=>ShowLabels,SidebarTextRole.Readings=>ShowReadings,SidebarTextRole.InstrumentNumbers=>ShowInstrumentNumbers,SidebarTextRole.InstrumentUnits=>ShowInstrumentUnits,_=>true};
     public double TitleTextScale { get; set; } = 1;
     public double HardwareTextScale { get; set; } = 1;
     public double LabelTextScale { get; set; } = 1;
@@ -68,6 +79,8 @@ public sealed class Preferences
             var json=File.ReadAllText(Path);
             var p = JsonSerializer.Deserialize<Preferences>(json) ?? new();
             p.HardwareNames ??= new();
+            p.SensorSource=SensorSources.Normalize(p.SensorSource);
+            p.SeededSourceDevices ??= new();
             p.TextFontFamily = p.TextFontFamily?.Trim() ?? "";
             using var document=JsonDocument.Parse(json);
             if(!document.RootElement.TryGetProperty("Layout",out _))p.Layout=p.Theme switch {"Original"=>"Original","Compact" or "Terminal"=>"Compact","Minimal"=>"Text",_=>"Modern"};
@@ -132,6 +145,7 @@ public record Metric(string Id, string Label, double? Value, string Unit, double
     }
 }
 public record Device(string Id, string Category, string Name, List<Metric> Metrics, bool DefaultVisible = true);
-public record SensorRow(string Id, string Device, string Name, string Kind, double? Value, string Unit,string HardwareKind="");
-public record Snapshot(List<Device> Devices, List<SensorRow> Sensors, List<string> Warnings, DateTime Time);
+public record SensorRow(string Id, string Device, string Name, string Kind, double? Value, string Unit,string HardwareKind="",string Provider="");
+public record DevicePreferenceSeed(string DeviceId,string ReferenceDeviceId,Dictionary<string,string> MetricIds);
+public record Snapshot(List<Device> Devices, List<SensorRow> Sensors, List<string> Warnings, DateTime Time,string SensorSource="",List<DevicePreferenceSeed>? PreferenceSeeds=null);
 

@@ -25,7 +25,7 @@ public sealed class NanoHardwareCard:Border,IHardwareCard
   foreach(var metric in device.Metrics)
   {
    var label=Ui.SidebarText(metric.Label,10*scale*Preferences.TextFactor(p.LabelTextScale),"Muted");label.ToolTip=Ui.SidebarFullLabel(metric.Label);
-   var value=Ui.Text("—",11*scale*Preferences.TextFactor(p.ValueTextScale));value.FontFamily=Ui.Font(p,"Cascadia Mono, Consolas");value.Foreground=Ui.ValueBrush(p,metric.Id==primary?.Id?DesignCatalog.CategoryColor(design,device.Category,p):design.Text);value.FontWeight=FontWeights.SemiBold;value.TextTrimming=TextTrimming.None;values[metric.Id]=value;
+   var value=Ui.RoleText(SidebarTextRole.Readings,"—",11*scale*Preferences.TextFactor(p.ValueTextScale));value.FontFamily=Ui.Font(p,"Cascadia Mono, Consolas");value.Foreground=Ui.ValueBrush(p,metric.Id==primary?.Id?DesignCatalog.CategoryColor(design,device.Category,p):design.Text);value.FontWeight=FontWeights.SemiBold;value.TextTrimming=TextTrimming.None;values[metric.Id]=value;
    if(metric.Unit=="IP"){value.TextWrapping=TextWrapping.Wrap;var ip=new StackPanel{Margin=new Thickness(0,1,0,1)};ip.Children.Add(label);ip.Children.Add(value);readings.Children.Add(ip);}
    else readings.Children.Add(new RadialHardwareCard.ReadoutPanel(label,value,11*scale*Preferences.TextFactor(p.ValueTextScale)){Margin=new Thickness(0,.5,0,.5)});
   }

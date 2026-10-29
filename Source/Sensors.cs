@@ -12,12 +12,16 @@ using Microsoft.Win32;
 
 namespace Aurora;
 
-// All calls into LHM live on one worker. The UI only sees immutable snapshots.
+// All sensor engine calls live on one worker. The UI only sees immutable snapshots.
 public sealed class SensorService
 {
     private readonly CancellationTokenSource stop = new();
     private readonly Dictionary<string, (long Rx, long Tx, long Stamp)> networks = new();
-    private Computer? computer;
+    private readonly SensorBackendSession backend;
+    public SensorService(SensorBackendSession? session=null)=>backend=session??new();
+    public volatile string Source=SensorSources.Libre;
+    private string attemptedSource="";
+    private DateTime retryAfter;
     private string? initWarning;
     private ulong previousIdle, previousKernel, previousUser;
     public int Interval = 1000;
@@ -29,43 +33,41 @@ public sealed class SensorService
     public void Stop() => stop.Cancel();
     private async Task Run()
     {
-        initWarning = SensorAccess.Describe();
-        try
-        {
-            computer = new Computer { IsCpuEnabled = true, IsGpuEnabled = true, IsMemoryEnabled = true,
-                IsMotherboardEnabled = true, IsStorageEnabled = true, IsNetworkEnabled = false,
-                IsControllerEnabled = true };
-            computer.Open();
-        }
-        catch (Exception e) { initWarning += "\nSensorzugriff: " + e.Message; }
         try
         {
             while (!stop.IsCancellationRequested)
             {
                 try { Updated?.Invoke(Read()); }
-                catch (Exception e) { Updated?.Invoke(new(new(), new(), new() { e.Message }, DateTime.Now)); }
+                catch (Exception e) { Updated?.Invoke(new(new(), new(), new() { e.Message }, DateTime.Now,SensorSources.Normalize(Source))); }
                 await Task.Delay(Interval, stop.Token).ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException) { }
-        finally { try { computer?.Close(); } catch { } }
-    }
-    private static IEnumerable<IHardware> Flatten(IHardware hw)
-    {
-        yield return hw;
-        foreach (var sub in hw.SubHardware) foreach (var item in Flatten(sub)) yield return item;
+        finally { try { backend.Dispose(); } catch { } }
     }
     public Snapshot Read()
     {
         var devices = new List<Device>(); var rows = new List<SensorRow>(); var warnings = new List<string>();
-        if (initWarning != null) warnings.Add(initWarning);
-        var hardware = computer?.Hardware.SelectMany(Flatten).ToArray() ?? Array.Empty<IHardware>();
-        foreach (var hw in hardware)
+        string source=SensorSources.Normalize(Source);
+        var hardware=Array.Empty<HardwareSample>();
+        if(source!=attemptedSource || DateTime.UtcNow>=retryAfter)
         {
-            try { hw.Update(); }
-            catch (Exception e) { warnings.Add(hw.Name + ": " + e.Message); continue; }
+            attemptedSource=source;
+            try
+            {
+                bool changed=backend.ActiveSource!=source || retryAfter!=DateTime.MinValue;
+                backend.Select(source);
+                if(changed)initWarning=SensorSources.Name(source)+"\n"+SensorAccess.Describe();
+                hardware=backend.Capture(warnings);
+                retryAfter=DateTime.MinValue;
+            }
+            catch(Exception error){initWarning=SensorSources.Name(source)+": "+error.Message;retryAfter=DateTime.UtcNow.AddSeconds(10);}
+        }
+        if(initWarning!=null)warnings.Add(initWarning);
+        foreach(var hw in hardware)
+        {
             var sensors = hw.Sensors;
-            double? Reading(ISensor s)
+            double? Reading(SensorSample s)
             {
                 // LHM can expose uninitialized privileged registers as 0. Do not present
                 // these as real CPU temperatures, clocks, package power or voltages.
@@ -74,13 +76,13 @@ public sealed class SensorService
                 return s.Value;
             }
             foreach (var s in sensors)
-                rows.Add(new(s.Identifier.ToString(), hw.Name, s.Name, s.SensorType.ToString(), Reading(s), Unit(s.SensorType),hw.HardwareType.ToString()));
+                rows.Add(new(s.Identifier.ToString(), hw.Name, s.Name, s.SensorType.ToString(), Reading(s), Unit(s.SensorType),hw.HardwareType.ToString(),hw.Provider));
             string kind = hw.HardwareType.ToString();
             string category = kind switch { "Cpu" => "CPU", "Memory" => "RAM", "Storage" => "Drives",
                 "Motherboard" or "SuperIO" => "Mainboard", _ when kind.StartsWith("Gpu") => "GPU", _ => "Controller" };
             // Windows memory and disk-space APIs provide stable totals, independent of vendor sensor naming.
             if (category == "RAM") continue;
-            ISensor? Find(SensorType type, params string[] prefer)
+            SensorSample? Find(SensorType type, params string[] prefer)
             {
                 var candidates = sensors.Where(s => s.SensorType == type).ToArray();
                 foreach (var name in prefer)
@@ -216,7 +218,20 @@ public sealed class SensorService
         }
         foreach (var d in devices)
             foreach (var m in d.Metrics.Where(m => !rows.Any(r => r.Id == m.Id))) rows.Add(new(m.Id, d.Name, m.Label, d.Category, m.Value, m.Unit));
-        return new(devices, rows, warnings, DateTime.Now);
+        var seeds=new List<DevicePreferenceSeed>();
+        foreach(var hw in hardware.Where(h=>h.PreferenceDeviceId.Length>0))
+        {
+            var device=devices.FirstOrDefault(d=>d.Id==hw.Identifier);
+            if(device==null)continue;
+            var aliases=new Dictionary<string,string>();
+            foreach(var metric in device.Metrics)
+            {
+                if(hw.PreferenceSensorIds!=null&&hw.PreferenceSensorIds.TryGetValue(metric.Id,out var reference))aliases[metric.Id]=reference;
+                else if(metric.Id==hw.Identifier+"/display-temperature"||metric.Id==hw.Identifier+"/clocks-average")aliases[metric.Id]=hw.PreferenceDeviceId+metric.Id[hw.Identifier.Length..];
+            }
+            seeds.Add(new(device.Id,hw.PreferenceDeviceId,aliases));
+        }
+        return new(devices, rows, warnings, DateTime.Now,source,seeds);
     }
     private double? CpuLoad()
     {

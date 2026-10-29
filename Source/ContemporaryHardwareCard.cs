@@ -44,16 +44,16 @@ public sealed class ContemporaryHardwareCard : Border,IHardwareCard
         var content=new Grid();content.ColumnDefinitions.Add(new(){Width=new GridLength(112)});content.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star)});body.Children.Add(content);
         var instrument=new Grid{Width=102,Height=118,VerticalAlignment=VerticalAlignment.Top,HorizontalAlignment=HorizontalAlignment.Left};
         graphic=new Instrument(layout,accent,design.Track,DesignCatalog.GraphSize(prefs)){Width=102,Height=118};instrument.Children.Add(graphic);
-        number=Ui.Text("—",24*prefs.FontScale*Preferences.TextFactor(prefs.InstrumentTextScale));number.FontFamily=Ui.Font(prefs,"Cascadia Mono, Consolas");number.Foreground=Ui.ValueBrush(prefs,accent);number.FontWeight=FontWeights.SemiBold;number.HorizontalAlignment=HorizontalAlignment.Center;number.TextTrimming=TextTrimming.None;
+        number=Ui.RoleText(SidebarTextRole.InstrumentNumbers,"—",24*prefs.FontScale*Preferences.TextFactor(prefs.InstrumentTextScale));number.FontFamily=Ui.Font(prefs,"Cascadia Mono, Consolas");number.Foreground=Ui.ValueBrush(prefs,accent);number.FontWeight=FontWeights.SemiBold;number.HorizontalAlignment=HorizontalAlignment.Center;number.TextTrimming=TextTrimming.None;
         System.Windows.Automation.AutomationProperties.SetAutomationId(number,"PrimaryMetric");
-        unit=Ui.Text("",9*prefs.FontScale*Preferences.TextFactor(prefs.UnitTextScale),"Muted");unit.HorizontalAlignment=HorizontalAlignment.Center;
+        unit=Ui.RoleText(SidebarTextRole.InstrumentUnits,"",9*prefs.FontScale*Preferences.TextFactor(prefs.UnitTextScale),"Muted");unit.HorizontalAlignment=HorizontalAlignment.Center;
         var digits=new StackPanel{VerticalAlignment=VerticalAlignment.Center};digits.Children.Add(number);digits.Children.Add(unit);
         var fitted=new Viewbox{Width=layout=="Precision"?66:82,Height=58,Stretch=Stretch.Uniform,StretchDirection=StretchDirection.DownOnly,HorizontalAlignment=layout=="Precision"?HorizontalAlignment.Left:HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(layout=="Precision"?3:0,0,0,layout=="Fluent"?12:0),Child=digits};instrument.Children.Add(fitted);content.Children.Add(instrument);
         var readings=new ExpandedReadingsPanel(prefs){VerticalAlignment=CardLayouts.SpaceMultiplier(prefs)>1?VerticalAlignment.Stretch:VerticalAlignment.Top};Grid.SetColumn(readings,1);content.Children.Add(readings);
         foreach(var metric in device.Metrics)
         {
             var label=Ui.SidebarText(metric.Label,10*textScale*Preferences.TextFactor(prefs.LabelTextScale),"Muted");
-            var value=Ui.Text("—",11*textScale*Preferences.TextFactor(prefs.ValueTextScale));value.FontFamily=Ui.Font(prefs,"Cascadia Mono, Consolas");value.Foreground=Ui.ValueBrush(prefs,design.Text);value.TextTrimming=TextTrimming.None;
+            var value=Ui.RoleText(SidebarTextRole.Readings,"—",11*textScale*Preferences.TextFactor(prefs.ValueTextScale));value.FontFamily=Ui.Font(prefs,"Cascadia Mono, Consolas");value.Foreground=Ui.ValueBrush(prefs,design.Text);value.TextTrimming=TextTrimming.None;
             if(metric.Unit=="IP")value.TextWrapping=TextWrapping.Wrap;
             values[metric.Id]=value;
             var row=new RadialHardwareCard.ReadoutPanel(label,value,11*textScale*Preferences.TextFactor(prefs.ValueTextScale)){Margin=new Thickness(0,2,0,3)};

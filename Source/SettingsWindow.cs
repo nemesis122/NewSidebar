@@ -21,6 +21,7 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
     private readonly TextBlock subtitle = Ui.Text("",13,"Muted");
     private readonly TextBox search = new() { Padding = new Thickness(10,8,10,8), Margin = new Thickness(0,0,0,12) };
     private readonly ListView sensorList = new() { MinHeight = 200, MaxHeight = 300 };
+    private readonly TextBlock sourceStatus=Ui.Text("",12,"Muted");
     private readonly TextBlock diagnostics = Ui.Text("",12,"Muted");
     private readonly Wpf.Ui.Controls.NavigationView nav = new(){PaneDisplayMode=Wpf.Ui.Controls.NavigationViewPaneDisplayMode.Left,OpenPaneLength=218,IsPaneOpen=true,IsPaneToggleVisible=false,IsBackButtonVisible=Wpf.Ui.Controls.NavigationViewBackButtonVisible.Collapsed,HeaderVisibility=Visibility.Collapsed,IsTopSeparatorVisible=false,IsFooterSeparatorVisible=false,FrameMargin=new Thickness(0),TransitionDuration=0};
     private readonly Dictionary<string,string> navigationLabels=new();
@@ -97,12 +98,12 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
     {
         var c = new Wpf.Ui.Controls.ToggleSwitch { OnContent=SettingsText.Translate("Ein",P.SettingsLanguage),OffContent=SettingsText.Translate("Aus",P.SettingsLanguage), IsChecked = value }; c.Click += (_,_) => { change(c.IsChecked==true); sidebar.Apply();SettingsText.Apply(this,P.SettingsLanguage); }; SettingRow(text,c);return c;
     }
-    private void Select<T>(string label, IEnumerable<T> values, T selected, Action<T> change)
+    private ComboBox Select<T>(string label, IEnumerable<T> values, T selected, Action<T> change)
     {
         var c = new ComboBox { ItemsSource = values, SelectedItem = selected, ItemTemplate=SettingsText.ChoiceTemplate(),HorizontalAlignment = HorizontalAlignment.Stretch,MaxWidth=440 };
-        c.SelectionChanged += (_,_) => { if(c.SelectedItem is T item) { change(item); sidebar.Apply(); } }; SettingRow(label,c);
+        c.SelectionChanged += (_,_) => { if(c.SelectedItem is T item) { change(item); sidebar.Apply(); } }; SettingRow(label,c);return c;
     }
-    private void Slider(string label,double min,double max,double value,double tick,string format,Action<double> change)
+    private void Slider(string label,double min,double max,double value,double tick,string format,Action<double> change,Func<bool>? shown=null,Action<bool>? setShown=null)
     {
         var input=new Wpf.Ui.Controls.NumberBox{Minimum=min,Maximum=max,Value=value,SmallChange=tick,LargeChange=tick*4,MaxDecimalPlaces=format.Contains('.')?2:0,AcceptsExpression=false,SpinButtonPlacementMode=Wpf.Ui.Controls.NumberBoxSpinButtonPlacementMode.Compact,MinWidth=86,Margin=new Thickness(10,0,0,0),VerticalAlignment=VerticalAlignment.Center};
         System.Windows.Automation.AutomationProperties.SetAutomationId(input,"SettingNumber:"+label);
@@ -112,6 +113,7 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
         if(label=="Schriftgröße (%)"){controls.ColumnDefinitions.Add(new(){Width=GridLength.Auto});var resetText=ActionButton("↺",()=>{P.FontScale=P.TitleTextScale=P.HardwareTextScale=P.LabelTextScale=P.ValueTextScale=P.InstrumentTextScale=P.UnitTextScale=1;sidebar.Apply();Navigate("Darstellung");});resetText.Padding=new Thickness(5,3,5,3);resetText.Margin=new Thickness(5,0,0,0);resetText.ToolTip="Schriftgröße zurücksetzen (100 %)";System.Windows.Automation.AutomationProperties.SetAutomationId(resetText,"ResetTextSize");Grid.SetColumn(resetText,2);controls.Children.Add(resetText);}
         bool syncing=false;s.ValueChanged+=(_,_)=>{syncing=true;input.Value=s.Value;syncing=false;change(s.Value);sidebar.Apply();};
         input.ValueChanged+=(_,args)=>{if(syncing)return;if(args.NewValue is double number&&double.IsFinite(number)){s.Value=Math.Clamp(number,min,max);}else{syncing=true;input.Value=s.Value;syncing=false;}};
+        if(shown!=null&&setShown!=null){var toggle=new Wpf.Ui.Controls.ToggleSwitch{IsChecked=shown(),OnContent=SettingsText.Translate("Anzeigen",P.SettingsLanguage),OffContent=SettingsText.Translate("Anzeigen",P.SettingsLanguage),Margin=new Thickness(12,0,0,0),VerticalAlignment=VerticalAlignment.Center};System.Windows.Automation.AutomationProperties.SetAutomationId(toggle,"ShowText:"+label);s.IsEnabled=input.IsEnabled=shown();toggle.Click+=(_,_)=>{bool visible=toggle.IsChecked==true;setShown(visible);s.IsEnabled=input.IsEnabled=visible;sidebar.Apply();};controls.ColumnDefinitions.Add(new(){Width=new GridLength(124)});System.Windows.Automation.AutomationProperties.SetName(toggle,SettingsText.Translate(label,P.SettingsLanguage)+": "+SettingsText.Translate("Anzeigen",P.SettingsLanguage));Grid.SetColumn(toggle,controls.ColumnDefinitions.Count-1);controls.Children.Add(toggle);}
         SettingRow(label,controls);
     }
     private void SettingRow(string label,FrameworkElement control)
@@ -183,14 +185,15 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
             case "Textgrößen":
                 Heading("Textgrößen","Die Einzelgrößen wirken zusätzlich zur allgemeinen Schriftgröße. 100 % entspricht dem gewählten Design.");
                 Card("Textgrößen einzeln (%)",()=>{
-                Slider("Widget-Titel",50,200,P.TitleTextScale*100,5,"0",v=>P.TitleTextScale=v/100);
-                Slider("Hardware-Namen",50,200,P.HardwareTextScale*100,5,"0",v=>P.HardwareTextScale=v/100);
-                Slider("Bezeichnungen",50,200,P.LabelTextScale*100,5,"0",v=>P.LabelTextScale=v/100);
-                Slider("Messwerte",50,200,P.ValueTextScale*100,5,"0",v=>P.ValueTextScale=v/100);
-                Slider("Instrument-Zahlen",50,200,P.InstrumentTextScale*100,5,"0",v=>P.InstrumentTextScale=v/100);
-                Slider("Instrument-Einheiten",50,200,P.UnitTextScale*100,5,"0",v=>P.UnitTextScale=v/100);
+                Slider("Widget-Titel",50,200,P.TitleTextScale*100,5,"0",v=>P.TitleTextScale=v/100,()=>P.ShowWidgetTitles,v=>P.ShowWidgetTitles=v);
+                Slider("Hardware-Namen",50,200,P.HardwareTextScale*100,5,"0",v=>P.HardwareTextScale=v/100,()=>P.ShowHardwareNames,v=>P.ShowHardwareNames=v);
+                Slider("Bezeichnungen",50,200,P.LabelTextScale*100,5,"0",v=>P.LabelTextScale=v/100,()=>P.ShowLabels,v=>P.ShowLabels=v);
+                Slider("Messwerte",50,200,P.ValueTextScale*100,5,"0",v=>P.ValueTextScale=v/100,()=>P.ShowReadings,v=>P.ShowReadings=v);
+                Slider("Instrument-Zahlen",50,200,P.InstrumentTextScale*100,5,"0",v=>P.InstrumentTextScale=v/100,()=>P.ShowInstrumentNumbers,v=>P.ShowInstrumentNumbers=v);
+                Slider("Instrument-Einheiten",50,200,P.UnitTextScale*100,5,"0",v=>P.UnitTextScale=v/100,()=>P.ShowInstrumentUnits,v=>P.ShowInstrumentUnits=v);
                 });
                 var resetSizes=ActionButton("Textgrößen zurücksetzen",()=>{P.FontScale=P.TitleTextScale=P.HardwareTextScale=P.LabelTextScale=P.ValueTextScale=P.InstrumentTextScale=P.UnitTextScale=1;sidebar.Apply();Navigate("Textgrößen");});System.Windows.Automation.AutomationProperties.SetAutomationId(resetSizes,"ResetIndividualTextSizes");page.Children.Add(resetSizes);
+                var showAll=ActionButton("Alle Texte anzeigen",()=>{P.ShowWidgetTitles=P.ShowHardwareNames=P.ShowLabels=P.ShowReadings=P.ShowInstrumentNumbers=P.ShowInstrumentUnits=true;sidebar.Apply();Navigate("Textgrößen");});showAll.Margin=new Thickness(0,6,0,0);System.Windows.Automation.AutomationProperties.SetAutomationId(showAll,"ShowAllSidebarText");page.Children.Add(showAll);
                 break;
             case "Farben":
                 Heading("Text & Diagramme","Textfarben sowie Farben und Stärke der Balken und Instrumente anpassen.");
@@ -261,6 +264,14 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
                 break;
             case "Voraussetzungen":
                 Heading("Sensoren einrichten", "Status prüfen und fehlende Komponenten gezielt einrichten. Es wird nichts automatisch installiert.");
+                Label("Sensorquelle");
+                var sourceChoice=Select("Sensorerkennung",SensorSources.All,SensorSources.All.First(s=>s.Key==SensorSources.Normalize(P.SensorSource)),v=>{P.SensorSource=v.Key;sourceStatus.Text=SettingsText.Translate("Sensorquelle wird gewechselt …",P.SettingsLanguage);});
+                System.Windows.Automation.AutomationProperties.SetAutomationId(sourceChoice,"SensorSource");
+                Note("Beide Optionen sind eingebaut. Der Wechsel erfolgt im Hintergrund. Kein separates Programm erforderlich.");
+                Note("Open Hardware Monitor + PawnIO: GPU und SMART über Open Hardware Monitor, CPU und Mainboard über die LibreHardwareMonitor/PawnIO-Brücke. Nicht unterstützte Geräte verwenden Libre als Ersatz.");
+                Note("Ohne WinRing0 und InpOut. Beide Optionen benötigen PawnIO für erweiterte CPU- und Mainboard-Werte.");
+                Note("Beim ersten Wechsel werden passende Geräte und Werte mit deiner bisherigen Auswahl übernommen. Danach bleiben Änderungen je Quelle erhalten. RAM und Netzwerk verwenden Windows.");
+                sourceStatus.TextWrapping=TextWrapping.Wrap;sourceStatus.Margin=new Thickness(0,0,0,12);page.Children.Add(sourceStatus);Refresh(sidebar.Latest);
                 Label("1 · Laufzeit");Note(System.IO.File.Exists(System.IO.Path.Combine(AppContext.BaseDirectory,"coreclr.dll"))?".NET-Laufzeit ist enthalten – keine zusätzliche Installation nötig.":".NET "+Environment.Version+" ist verfügbar.");
                 Label("2 · Sensortreiber für CPU und Mainboard");Note(SensorAccess.Describe());
                 var install=ActionButton("PawnIO installieren / aktualisieren",()=>{});
@@ -469,10 +480,15 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
     {
         if(current=="Position" && startupCheck!=null) startupCheck.IsChecked=ScheduledAutostart.Enabled;
         if(current is "Sensoren" or "Eigene Werte") UpdateSensors();
+        if(current=="Voraussetzungen")
+        {
+            sourceStatus.Text=snapshot==null ? "Sensoren werden erkannt …" : SensorSources.Name(P.SensorSource)+" · "+snapshot.Sensors.Count+" "+SettingsText.Translate("Messwerte",P.SettingsLanguage)+" · "+snapshot.Time.ToString("HH:mm:ss");
+            SettingsText.Apply(sourceStatus,P.SettingsLanguage);
+        }
         if(current == "System")
         {
             bool admin = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
-            diagnostics.Text = $"Sidebar by NemeSIS {typeof(App).Assembly.GetName().Version?.ToString(3)} · .NET {Environment.Version}\nGestartete EXE: {Environment.ProcessPath}\nZugriff: {(admin ? "Administrator" : "Standardbenutzer")}\n"+ScheduledAutostart.Describe()+"\n"+
+            diagnostics.Text = $"Sidebar by NemeSIS {typeof(App).Assembly.GetName().Version?.ToString(3)} · .NET {Environment.Version}\nSensorquelle: {SensorSources.Name(P.SensorSource)}\nGestartete EXE: {Environment.ProcessPath}\nZugriff: {(admin ? "Administrator" : "Standardbenutzer")}\n"+ScheduledAutostart.Describe()+"\n"+
                 (snapshot == null ? "Sensoren werden initialisiert …" : $"{snapshot.Devices.Count} Geräte · {snapshot.Sensors.Count} Messwerte · {snapshot.Time:HH:mm:ss}\n"+string.Join("\n",snapshot.Warnings));
             SettingsText.Apply(this,P.SettingsLanguage);
         }

@@ -72,6 +72,9 @@ public sealed class SidebarWindow : Window
     {
         Application.Current.Resources["AppFont"]=Ui.Font(Prefs,"Segoe UI");
         ApplyTheme(); Topmost = Prefs.Topmost; Opacity = 1; service.Interval = Prefs.Interval;
+        Prefs.SensorSource=SensorSources.Normalize(Prefs.SensorSource);
+        if(service.Source!=Prefs.SensorSource){Latest=null;shape="";cards.Children.Clear();views.Clear();}
+        service.Source=Prefs.SensorSource;
         service.CpuTemperatureSources=new Dictionary<string,string>(Prefs.CpuTemperatureSources);
         Place(); shape = ""; if (Latest != null) Render(Latest);
         try { Prefs.Save(); } catch(Exception e) { status.Text = "Speichern fehlgeschlagen"; status.ToolTip = e.Message; }
@@ -102,10 +105,11 @@ public sealed class SidebarWindow : Window
     private void OnSnapshot(Snapshot snapshot)
     {
         if (Dispatcher.HasShutdownStarted || exiting) return;
-        Dispatcher.BeginInvoke(new Action(() => { Latest = snapshot; Render(snapshot); settings?.Refresh(snapshot); }));
+        Dispatcher.BeginInvoke(new Action(() => { if(snapshot.SensorSource.Length>0&&snapshot.SensorSource!=SensorSources.Normalize(Prefs.SensorSource))return; Latest = snapshot; Render(snapshot); settings?.Refresh(snapshot); }));
     }
     private void Render(Snapshot snapshot)
     {
+        if(SensorPreferenceMigration.Apply(snapshot,Prefs))try{Prefs.Save();}catch(Exception e){status.ToolTip=e.Message;}
         if (!Prefs.DeviceDefaultsApplied && snapshot.Devices.Count > 0)
         {
             foreach(var d in snapshot.Devices.Where(d=>!d.DefaultVisible)) if (!Prefs.HiddenDevices.Contains(d.Id)) Prefs.HiddenDevices.Add(d.Id);
@@ -150,11 +154,12 @@ public static class Ui
     public static string SidebarLabel(string label)=>label switch{"Interne IP" or "Internal IP"=>"Int IP","Externe IP" or "External IP"=>"Ext IP","Download"=>"DL","Upload"=>"UL","Adapter-Link" or "Adapter link" or "Link speed" or "Verbindung"=>"Link","Temperatur" or "Temperature"=>"Temp","Auslastung"=>"Load","Takt Ø" or "Average clock" or "Average Clock"=>"Clock","Takt"=>"Clock","Leistung"=>"Power","Spannung"=>"Voltage","Lüfter"=>"Fan","Belegt"=>"Used","Verfügbar"=>"Available","Frei"=>"Free","Gesamt"=>"Total","Kapazität"=>"Capacity","Lesen"=>"Read","Schreiben"=>"Write","VRAM belegt"=>"VRAM used","VRAM Last"=>"VRAM load","Verbleibende Lebensdauer"=>"Remaining life","Mainboard"=>"Motherboard","Custom"=>"Custom sensors","Controller"=>"Controllers",_=>label.Replace("Temperatur (","Temp (").Replace("Temperature (","Temp (").Replace("Nicht verfügbar","Unavailable")};
     public static string SidebarFullLabel(string label)=>label switch{"Interne IP" or "Internal IP" or "Int IP"=>"Internal IP address","Externe IP" or "External IP" or "Ext IP"=>"External IP address (default internet route)","Temperatur" or "Temperature" or "Temp"=>"Temperature","Takt Ø" or "Average clock" or "Average Clock"=>"Average clock","Download" or "DL"=>"Download","Upload" or "UL"=>"Upload","Adapter-Link" or "Adapter link" or "Link speed" or "Link" or "Verbindung"=>"Adapter link speed",_=>SidebarLabel(label)};
     public static string HardwareName(string name)=>name.Replace("Physischer Arbeitsspeicher","Physical memory").Replace("Eigene Werte ohne Widget-Zuordnung","Unassigned custom readings").Replace("Deine angehefteten Sensoren","Pinned sensors");
-    public static TextBlock SidebarText(string text,double size=13,string resource="Text"){var block=Text(SidebarLabel(text),size,resource);block.ToolTip=SidebarFullLabel(text);return block;}
+    public static TextBlock SidebarText(string text,double size=13,string resource="Text"){var block=Text(SidebarLabel(text),size,resource);SidebarTextVisibility.SetRole(block,new[]{"CPU","GPU","RAM","Drives","Network","Mainboard","Controller","Custom"}.Contains(text,StringComparer.OrdinalIgnoreCase)?SidebarTextRole.WidgetTitles:SidebarTextRole.Labels);block.ToolTip=SidebarFullLabel(text);return block;}
     public static TextBlock HardwareTitle(string name,double size,bool literal=false){var text=Text(literal?name:HardwareName(name),size,"HardwareName");text.FontWeight=FontWeights.SemiBold;text.ToolTip=text.Text;System.Windows.Automation.AutomationProperties.SetAutomationId(text,"HardwareName");return text;}
     public static SolidColorBrush ValueBrush(Preferences prefs,string fallback)=>Brush(DesignCatalog.ColorOr(prefs.ValueColor,fallback));
     public static SolidColorBrush Brush(string color) => (SolidColorBrush)new BrushConverter().ConvertFromString(color)!;
-    public static TextBlock Text(string text, double size = 13, string resource = "Text") { var t = new TextBlock { Text = text, FontSize = size }; t.SetResourceReference(TextBlock.ForegroundProperty, resource); return t; }
+    public static TextBlock Text(string text, double size = 13, string resource = "Text") { var t = new SidebarTextBlock { Text = text, FontSize = size }; t.SetResourceReference(TextBlock.ForegroundProperty, resource); if(text=="—")SidebarTextVisibility.SetRole(t,SidebarTextRole.Readings); return t; }
+    public static TextBlock RoleText(SidebarTextRole role,string text,double size=13,string resource="Text"){var block=Text(text,size,resource);SidebarTextVisibility.SetRole(block,role);return block;}
     public static Button Button(string text, Action click) { var b = new Button { Content = text }; b.Click += (_,_) => click(); return b; }
     public static string Color(string category) => category switch { "CPU" => "#66DEC5", "GPU" => "#AC9BFA", "RAM" => "#78B9FC", "Drives" => "#F6BC70", "Network" => "#7DD9EC", _ => "#ADBBD0" };
     public static string Icon(string category) => category switch { "CPU" => "▦", "GPU" => "▣", "RAM" => "▥", "Drives" => "▰", "Network" => "⇅", "Custom" => "✧", _ => "◇" };
@@ -196,12 +201,12 @@ public sealed class HardwareCard : Border,IHardwareCard
         var head = new Grid();head.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star)});head.ColumnDefinitions.Add(new(){Width=GridLength.Auto});
         bool stackedHero=device.Category=="Network" && !original;
         if(stackedHero){head.RowDefinitions.Add(new(){Height=GridLength.Auto});head.RowDefinitions.Add(new(){Height=GridLength.Auto});}
-        hero = Ui.Text("—", (compact?16:21)*prefs.FontScale*Preferences.TextFactor(prefs.InstrumentTextScale)); hero.FontWeight = FontWeights.SemiBold; hero.Foreground = Ui.ValueBrush(prefs,color); hero.HorizontalAlignment = HorizontalAlignment.Right;
+        hero = Ui.RoleText(SidebarTextRole.InstrumentNumbers,"—", (compact?16:21)*prefs.FontScale*Preferences.TextFactor(prefs.InstrumentTextScale)); hero.FontWeight = FontWeights.SemiBold; hero.Foreground = Ui.ValueBrush(prefs,color); hero.HorizontalAlignment = HorizontalAlignment.Right;
         System.Windows.Automation.AutomationProperties.SetAutomationId(hero,"PrimaryMetric");
         if(original)hero.Visibility=Visibility.Collapsed;
         if(stackedHero){Grid.SetRow(hero,1);Grid.SetColumnSpan(hero,2);hero.Margin=new Thickness(0,5,0,0);}else Grid.SetColumn(hero,1);
         hero.TextTrimming=TextTrimming.CharacterEllipsis;head.Children.Add(hero);
-        var title = Ui.Text(original?Ui.SidebarLabel(device.Category):Ui.SidebarLabel(device.Category).ToUpperInvariant(), (original?15:11)*readingScale*Preferences.TextFactor(prefs.TitleTextScale)); title.FontWeight = original?FontWeights.Normal:FontWeights.SemiBold; title.VerticalAlignment = VerticalAlignment.Center;
+        var title = Ui.RoleText(SidebarTextRole.WidgetTitles,original?Ui.SidebarLabel(device.Category):Ui.SidebarLabel(device.Category).ToUpperInvariant(), (original?15:11)*readingScale*Preferences.TextFactor(prefs.TitleTextScale)); title.FontWeight = original?FontWeights.Normal:FontWeights.SemiBold; title.VerticalAlignment = VerticalAlignment.Center;
         var heading=new Grid {VerticalAlignment=VerticalAlignment.Center};heading.ColumnDefinitions.Add(new(){Width=GridLength.Auto});heading.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star)});heading.Children.Add(Ui.HardwareIcon(device.Category,(original?18:13)*readingScale*Preferences.TextFactor(prefs.TitleTextScale)));Grid.SetColumn(title,1);title.TextTrimming=TextTrimming.CharacterEllipsis;title.ToolTip=device.Category;heading.Children.Add(title);if(stackedHero)Grid.SetColumnSpan(heading,2);head.Children.Add(heading);stack.Children.Add(head);
         var subtitle = Ui.HardwareTitle(device.Name, (original?12:11)*readingScale*Preferences.TextFactor(prefs.HardwareTextScale),prefs.HardwareNames.ContainsKey(device.Id)); subtitle.TextTrimming = TextTrimming.None; subtitle.TextWrapping = TextWrapping.Wrap; subtitle.Margin = new Thickness(0,original?7:3,0,compact?4:7); subtitle.ToolTip = Ui.HardwareName(device.Name); stack.Children.Add(subtitle);
         IEnumerable<Metric> display=device.Metrics;
@@ -211,11 +216,11 @@ public sealed class HardwareCard : Border,IHardwareCard
         }
         foreach(var m in display)
         {
-            if(m.Unit=="IP"){var ipRow=new StackPanel{Margin=new Thickness(0,3,0,3)};ipRow.Children.Add(Ui.SidebarText(m.Label,(original?12:11)*readingScale*Preferences.TextFactor(prefs.LabelTextScale),"Muted"));var ipValue=Ui.Text("—",(original?12:11)*readingScale*Preferences.TextFactor(prefs.ValueTextScale));ipValue.Foreground=Ui.ValueBrush(prefs,design.Text);ipValue.TextWrapping=TextWrapping.Wrap;ipValue.TextTrimming=TextTrimming.None;ipRow.Children.Add(ipValue);stack.Children.Add(ipRow);values[m.Id]=(ipValue,null);continue;}
+            if(m.Unit=="IP"){var ipRow=new StackPanel{Margin=new Thickness(0,3,0,3)};ipRow.Children.Add(Ui.SidebarText(m.Label,(original?12:11)*readingScale*Preferences.TextFactor(prefs.LabelTextScale),"Muted"));var ipValue=Ui.RoleText(SidebarTextRole.Readings,"—",(original?12:11)*readingScale*Preferences.TextFactor(prefs.ValueTextScale));ipValue.Foreground=Ui.ValueBrush(prefs,design.Text);ipValue.TextWrapping=TextWrapping.Wrap;ipValue.TextTrimming=TextTrimming.None;ipRow.Children.Add(ipValue);stack.Children.Add(ipRow);values[m.Id]=(ipValue,null);continue;}
             var row = new DockPanel { Margin = new Thickness(0,compact?1:2,0,compact?1:2) };
-            var v = Ui.Text("—", (original?12:11)*readingScale*Preferences.TextFactor(prefs.ValueTextScale)); v.Foreground=Ui.ValueBrush(prefs,design.Text); v.TextTrimming=TextTrimming.CharacterEllipsis;v.FontFamily = Ui.Font(prefs,original?"Segoe UI":design.Layout=="Terminal"?"Consolas":"Cascadia Mono, Consolas"); DockPanel.SetDock(v,Dock.Right); row.Children.Add(v);row.SizeChanged+=(_,_)=>v.MaxWidth=Math.Max(50,row.ActualWidth*.65);
+            var v = Ui.RoleText(SidebarTextRole.Readings,"—", (original?12:11)*readingScale*Preferences.TextFactor(prefs.ValueTextScale)); v.Foreground=Ui.ValueBrush(prefs,design.Text); v.TextTrimming=TextTrimming.CharacterEllipsis;v.FontFamily = Ui.Font(prefs,original?"Segoe UI":design.Layout=="Terminal"?"Consolas":"Cascadia Mono, Consolas"); DockPanel.SetDock(v,Dock.Right); row.Children.Add(v);row.SizeChanged+=(_,_)=>v.MaxWidth=Math.Max(50,row.ActualWidth*.65);
             string caption=original ? m.Label switch {"Temperatur"=>"Temp","Auslastung"=>"Load","Takt Ø"=>"Clock","Takt"=>"Core","Leistung"=>"Power","Spannung"=>"Volt","Lüfter"=>"Fan","Belegt"=>"Used","Verfügbar"=>"Available","Frei"=>"Free","Gesamt"=>"Total","Kapazität"=>"Total","Lesen"=>"Read","Schreiben"=>"Write","Download"=>"DL","Upload"=>"UL","Verbindung"=>"Link speed",_=>m.Label} : m.Label;
-            var label = Ui.Text(Ui.SidebarLabel(caption), (original?12:11)*readingScale*Preferences.TextFactor(prefs.LabelTextScale),"Muted"); label.TextTrimming = TextTrimming.CharacterEllipsis; label.Margin = new Thickness(0,0,9,0); label.ToolTip = Ui.SidebarFullLabel(m.Label); if(prefs.LabelTextScale!=1||prefs.ValueTextScale!=1){row.Children.Clear();stack.Children.Add(new RadialHardwareCard.ReadoutPanel(label,v,(original?12:11)*readingScale*Preferences.TextFactor(prefs.ValueTextScale)){Margin=row.Margin});}else{row.Children.Add(label);stack.Children.Add(row);}
+            var label = Ui.RoleText(SidebarTextRole.Labels,Ui.SidebarLabel(caption), (original?12:11)*readingScale*Preferences.TextFactor(prefs.LabelTextScale),"Muted"); label.TextTrimming = TextTrimming.CharacterEllipsis; label.Margin = new Thickness(0,0,9,0); label.ToolTip = Ui.SidebarFullLabel(m.Label); if(prefs.LabelTextScale!=1||prefs.ValueTextScale!=1){row.Children.Clear();stack.Children.Add(new RadialHardwareCard.ReadoutPanel(label,v,(original?12:11)*readingScale*Preferences.TextFactor(prefs.ValueTextScale)){Margin=row.Margin});}else{row.Children.Add(label);stack.Children.Add(row);}
             Border? bar = null;
             if (m.Unit is "%" or "°C" && device.Category != "Custom")
             {

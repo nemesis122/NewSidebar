@@ -17,14 +17,17 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
     private bool addressBusy;
     private readonly NetworkAddressLookup addressLookup;
     private Preferences P => sidebar.Prefs;
-    private readonly StackPanel page = new() { Margin = new Thickness(20,9,20,9) };
+    private readonly StackPanel page = new() { Margin = new Thickness(22,8,22,8) };
     private readonly TextBlock subtitle = Ui.Text("",13,"Muted");
     private readonly TextBox search = new() { Padding = new Thickness(10,8,10,8), Margin = new Thickness(0,0,0,12) };
     private readonly ListView sensorList = new() { MinHeight = 200, MaxHeight = 300 };
     private readonly TextBlock diagnostics = Ui.Text("",12,"Muted");
-    private readonly ListBox nav = new() { Background = System.Windows.Media.Brushes.Transparent, BorderThickness = new Thickness(0), Padding = new Thickness(12,4,12,4) };
+    private readonly Wpf.Ui.Controls.NavigationView nav = new(){PaneDisplayMode=Wpf.Ui.Controls.NavigationViewPaneDisplayMode.Left,OpenPaneLength=218,IsPaneOpen=true,IsPaneToggleVisible=false,IsBackButtonVisible=Wpf.Ui.Controls.NavigationViewBackButtonVisible.Collapsed,HeaderVisibility=Visibility.Collapsed,IsTopSeparatorVisible=false,IsFooterSeparatorVisible=false,FrameMargin=new Thickness(0),TransitionDuration=0};
+    private readonly Dictionary<string,string> navigationLabels=new();
+    private readonly Wpf.Ui.Controls.InfoBar status=new(){IsOpen=false,IsClosable=true,Margin=new Thickness(14,4,14,8)};
+    private bool navigationReady;
     private readonly ScrollViewer pageScroll=new() {VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled};
-    private CheckBox? startupCheck;
+    private Wpf.Ui.Controls.ToggleSwitch? startupCheck;
     private Button? pinAction;
     private readonly ComboBox pinTarget=new(){MinWidth=240,HorizontalAlignment=HorizontalAlignment.Stretch};
     private bool syncingTarget;
@@ -35,33 +38,35 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
     private string current = "Position";
     public SettingsWindow(SidebarWindow sidebar,NetworkAddressLookup? networkLookup=null)
     {
-        Resources.MergedDictionaries.Add(FluentSurface.Resources);ExtendsContentIntoTitleBar=true;WindowBackdropType=Wpf.Ui.Controls.WindowBackdropType.Mica;
+        Resources.MergedDictionaries.Add(SettingsSurface.Resources);ExtendsContentIntoTitleBar=true;WindowBackdropType=Wpf.Ui.Controls.WindowBackdropType.Mica;
         this.sidebar = sidebar;addressLookup=networkLookup??new NetworkAddressLookup();
+        nav.Resources.MergedDictionaries.Add(Resources);nav.SetResourceReference(BackgroundProperty,"Back");
         SetResourceReference(FontFamilyProperty,"AppFont");
         Closed+=(_,_)=>addressCancellation.Cancel();
         SettingsText.CurrentLanguage=P.SettingsLanguage;
         foreach(var pair in new[]{("Back","#10141C"),("Panel","#181E29"),("Edge","#2B3544"),("Text","#ECF2FA"),("Muted","#AAB6C7"),("Accent","#6ACCEB")})Resources[pair.Item1]=Ui.Brush(pair.Item2);
+        foreach(var pair in new[]{("NavigationViewContentBackground","#10141C"),("NavigationViewItemBackgroundSelected","#263447"),("NavigationViewItemBackgroundPointerOver","#202B3B"),("NavigationViewItemForeground","#ECF2FA"),("NavigationViewItemForegroundPointerOver","#FFFFFF"),("NavigationViewSelectionIndicatorForeground","#6ACCEB")})Resources[pair.Item1]=Ui.Brush(pair.Item2);
         void CompactStyle(Type type,params Setter[] setters){var style=new Style(type,(Style)FindResource(type));foreach(var setter in setters)style.Setters.Add(setter);Resources[type]=style;}
-        CompactStyle(typeof(Button),new Setter(PaddingProperty,new Thickness(9,5,9,5)),new Setter(FontSizeProperty,12d),new Setter(HorizontalAlignmentProperty,HorizontalAlignment.Left));
+        CompactStyle(typeof(Wpf.Ui.Controls.Button),new Setter(PaddingProperty,new Thickness(9,5,9,5)),new Setter(FontSizeProperty,12d),new Setter(HorizontalAlignmentProperty,HorizontalAlignment.Left));
         CompactStyle(typeof(ComboBox),new Setter(MarginProperty,new Thickness(0)),new Setter(FontSizeProperty,12d));
-        CompactStyle(typeof(CheckBox),new Setter(MarginProperty,new Thickness(0,3,0,3)),new Setter(FontSizeProperty,12d));
+        // WPF UI 4.3 animates a template Tag on checked boxes; recycling that template can throw.
+        // Keep the existing Windows selection boxes; general preferences use native ToggleSwitch controls.
+        var selectionStyle=new Style(typeof(CheckBox),Application.Current.TryFindResource(typeof(CheckBox)) as Style);selectionStyle.Setters.Add(new Setter(MarginProperty,new Thickness(0,3,0,3)));selectionStyle.Setters.Add(new Setter(FontSizeProperty,12d));Resources[typeof(CheckBox)]=selectionStyle;
         CompactStyle(typeof(Slider),new Setter(MarginProperty,new Thickness(0,2,0,2)));
+        CompactStyle(typeof(Wpf.Ui.Controls.NumberBox),new Setter(FontSizeProperty,12d),new Setter(PaddingProperty,new Thickness(6,4,6,4)));
+        
         SetResourceReference(BackgroundProperty,"Back"); SetResourceReference(ForegroundProperty,"Text");
-        Title = "Sidebar by NemeSIS · Einstellungen"; Width = 980; Height = 760; MinWidth = 800; MinHeight = 560;
+        Title = "Sidebar by NemeSIS · Einstellungen"; Width = 1020; Height = 780; MinWidth = 800; MinHeight = 560;
         ShowInTaskbar=false;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        var layout = new Grid();layout.SetResourceReference(Panel.BackgroundProperty,"Back"); layout.ColumnDefinitions.Add(new() { Width = new GridLength(210) }); layout.ColumnDefinitions.Add(new() { Width = new GridLength(1,GridUnitType.Star) });
-        var left = new DockPanel(); left.SetResourceReference(Panel.BackgroundProperty,"Panel");
-        var logo = new StackPanel { Margin = new Thickness(23,20,12,10) };
-        logo.Children.Add(Ui.Text("Sidebar by NemeSIS",15,"Accent")); logo.Children.Add(Ui.Text("DEIN SYSTEM. IM BLICK.",9,"Muted")); DockPanel.SetDock(logo,Dock.Top); left.Children.Add(logo);
-        var badge = Ui.Text("Änderungen werden automatisch gespeichert.",11,"Muted");badge.TextWrapping=TextWrapping.Wrap; badge.Margin = new Thickness(23,12,18,14); DockPanel.SetDock(badge,Dock.Bottom); left.Children.Add(badge);
-        foreach(var entry in new[]{("Position","Position & Größe"),("Darstellung","Design & Schrift"),("Textgrößen","Textgrößen"),("Farben","Text & Diagramme"),("Geräte","Geräte & Werte"),("Karten","Karten & Reihenfolge"),("Grenzen","Warngrenzen"),("Voraussetzungen","Einrichtung"),("System","Systeminfo")})nav.Items.Add(new ListBoxItem{Tag=entry.Item1,Content=entry.Item2,Padding=new Thickness(13,8,10,8),Margin=new Thickness(0,1,0,1)});
-        var languagePanel=new StackPanel{Margin=new Thickness(12,12,12,12)};languagePanel.Children.Add(Ui.Text("Sprache",11,"Muted"));
-        var languages=new ComboBox{ItemsSource=SettingsText.Languages,SelectedItem=SettingsText.Languages.FirstOrDefault(l=>l.Key==P.SettingsLanguage)??SettingsText.Languages[0],MinWidth=150};languagePanel.Children.Add(languages);System.Windows.Automation.AutomationProperties.SetAutomationId(languages,"SettingsLanguage");
-        languages.SelectionChanged+=(_,_)=>{if(languages.SelectedItem is SettingsLanguage choice){P.SettingsLanguage=choice.Key;SettingsText.CurrentLanguage=choice.Key;P.Save();Navigate(current);}};DockPanel.SetDock(languagePanel,Dock.Bottom);left.Children.Add(languagePanel);
-        nav.SelectionChanged += (_,_) => { if(nav.SelectedItem is ListBoxItem i && i.Tag is string key) Navigate(key); };
-        left.Children.Add(nav); layout.Children.Add(left);
-        pageScroll.Content=page;Grid.SetColumn(pageScroll,1);layout.Children.Add(pageScroll);var shell=new Grid();shell.RowDefinitions.Add(new(){Height=new GridLength(32)});shell.RowDefinitions.Add(new(){Height=new GridLength(1,GridUnitType.Star)});var titleBar=new Wpf.Ui.Controls.TitleBar{ButtonsForeground=Ui.Brush("#ECF2FA"),Foreground=Ui.Brush("#ECF2FA"),Title="Sidebar by NemeSIS",ShowMinimize=true,ShowMaximize=true};titleBar.SetResourceReference(Control.BackgroundProperty,"Back");shell.Children.Add(titleBar);Grid.SetRow(layout,1);shell.Children.Add(layout);Content=shell;
+        var logo=new StackPanel{Margin=new Thickness(20,18,8,14)};logo.Children.Add(Ui.Text("Sidebar by NemeSIS",16,"Text"));logo.Children.Add(Ui.Text("Einstellungen",11,"Muted"));nav.PaneHeader=logo;
+        var entries=new[]{("Übersicht","Übersicht",Wpf.Ui.Controls.SymbolRegular.Home24,typeof(OverviewSettingsPage)),("Position","Position & Größe",Wpf.Ui.Controls.SymbolRegular.Desktop24,typeof(PositionSettingsPage)),("Darstellung","Design & Schrift",Wpf.Ui.Controls.SymbolRegular.Board24,typeof(AppearanceSettingsPage)),("Textgrößen","Textgrößen",Wpf.Ui.Controls.SymbolRegular.TextFontSize24,typeof(TypographySettingsPage)),("Farben","Text & Diagramme",Wpf.Ui.Controls.SymbolRegular.Color24,typeof(ColorsSettingsPage)),("Geräte","Geräte & Werte",Wpf.Ui.Controls.SymbolRegular.DesktopPulse24,typeof(DevicesSettingsPage)),("Karten","Karten & Reihenfolge",Wpf.Ui.Controls.SymbolRegular.ArrowSort24,typeof(CardsSettingsPage)),("Grenzen","Warngrenzen",Wpf.Ui.Controls.SymbolRegular.Shield24,typeof(LimitsSettingsPage)),("Voraussetzungen","Einrichtung",Wpf.Ui.Controls.SymbolRegular.Settings24,typeof(SetupSettingsPage)),("System","Systeminfo",Wpf.Ui.Controls.SymbolRegular.Info24,typeof(SystemSettingsPage))};
+        foreach(var entry in entries){navigationLabels[entry.Item1]=entry.Item2;var item=new Wpf.Ui.Controls.NavigationViewItem{Tag=entry.Item1,Content=entry.Item2,TargetPageTag=entry.Item1,TargetPageType=entry.Item4,Icon=new Wpf.Ui.Controls.SymbolIcon(entry.Item3),Margin=new Thickness(4,1,4,1)};item.Resources.MergedDictionaries.Add(Resources);nav.MenuItems.Add(item);}
+        var footer=new StackPanel{Margin=new Thickness(16,10,16,16)};footer.Resources.MergedDictionaries.Add(Resources);footer.Children.Add(Ui.Text("Sprache",11,"Muted"));var languages=new ComboBox{ItemsSource=SettingsText.Languages,SelectedItem=SettingsText.Languages.FirstOrDefault(l=>l.Key==P.SettingsLanguage)??SettingsText.Languages[0],HorizontalAlignment=HorizontalAlignment.Stretch,Margin=new Thickness(0,5,0,10)};languages.Resources.MergedDictionaries.Add(Resources);languages.Style=(Style)Resources[typeof(ComboBox)];footer.Children.Add(languages);System.Windows.Automation.AutomationProperties.SetAutomationId(languages,"SettingsLanguage");var badge=Ui.Text("Änderungen werden automatisch gespeichert.",10,"Muted");badge.TextWrapping=TextWrapping.Wrap;footer.Children.Add(badge);nav.PaneFooter=footer;
+        languages.SelectionChanged+=(_,_)=>{if(languages.SelectedItem is SettingsLanguage choice){P.SettingsLanguage=choice.Key;SettingsText.CurrentLanguage=choice.Key;P.Save();Navigate(current);TranslateNavigation();}};
+        nav.SelectionChanged+=(_,_)=>{if(nav.SelectedItem is Wpf.Ui.Controls.NavigationViewItem item&&item.Tag is string key)Navigate(key);};
+        pageScroll.Resources.MergedDictionaries.Add(Resources);pageScroll.SetResourceReference(BackgroundProperty,"Back");pageScroll.Content=page;nav.ContentOverlay=pageScroll;nav.SetPageProviderService(new SettingsPageProvider(pageScroll));nav.Loaded+=(_,_)=>{if(navigationReady)return;navigationReady=true;nav.ContentOverlay=null;SelectPage(current);};
+        var shell=new Grid();shell.SetResourceReference(Panel.BackgroundProperty,"Back");shell.RowDefinitions.Add(new(){Height=new GridLength(36)});shell.RowDefinitions.Add(new(){Height=new GridLength(1,GridUnitType.Star)});shell.RowDefinitions.Add(new(){Height=GridLength.Auto});var titleBar=new Wpf.Ui.Controls.TitleBar{ButtonsForeground=Ui.Brush("#ECF2FA"),Foreground=Ui.Brush("#ECF2FA"),Title="Sidebar by NemeSIS",ShowMinimize=true,ShowMaximize=true};titleBar.SetResourceReference(Control.BackgroundProperty,"Back");shell.Children.Add(titleBar);Grid.SetRow(nav,1);shell.Children.Add(nav);Grid.SetRow(status,2);shell.Children.Add(status);Content=shell;
         var gridView = new GridView();
         var pinFactory=new FrameworkElementFactory(typeof(CheckBox));pinFactory.SetBinding(CheckBox.IsCheckedProperty,new System.Windows.Data.Binding("Pinned"){Mode=System.Windows.Data.BindingMode.TwoWay,UpdateSourceTrigger=System.Windows.Data.UpdateSourceTrigger.PropertyChanged});pinFactory.SetValue(CheckBox.HorizontalAlignmentProperty,HorizontalAlignment.Center);pinFactory.SetValue(CheckBox.ToolTipProperty,"Häkchen = in Eigene Werte hinzugefügt. Zum Entfernen Häkchen ausschalten.");
         gridView.Columns.Add(new GridViewColumn {Header="Hinzugefügt",Width=88,CellTemplate=new DataTemplate{VisualTree=pinFactory}});
@@ -74,45 +79,50 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
         sensorList.SizeChanged+=(_,_)=>{double remaining=Math.Max(140,sensorList.ActualWidth-308);gridView.Columns[1].Width=remaining*.35;gridView.Columns[2].Width=remaining*.65;gridView.Columns[3].Width=75;gridView.Columns[4].Width=125;};
         sensorList.SelectionChanged+=(_,_)=>UpdatePinAction();
         search.TextChanged += (_,_) => UpdateSensors();
-        SelectPage("Position");
+        SelectPage("Übersicht");
     }
     private void Heading(string title, string description)
     {
+        foreach(UIElement child in page.Children)PreserveControlResources(child);
         page.Children.Clear();
         var heading = Ui.Text(title,22); heading.FontWeight = FontWeights.SemiBold; heading.Margin = new Thickness(0,0,0,4); page.Children.Add(heading);
-        subtitle.FontSize=12;subtitle.Text = description; subtitle.TextWrapping = TextWrapping.Wrap; subtitle.Margin = new Thickness(0,0,0,12); page.Children.Add(subtitle);
+        subtitle.FontSize=12;subtitle.Text = description; subtitle.TextWrapping = TextWrapping.Wrap; subtitle.Margin = new Thickness(0,0,0,9); page.Children.Add(subtitle);
     }
     private void Label(string text) { var t = Ui.Text(text,12,"Muted");t.TextWrapping=TextWrapping.Wrap; t.Margin = new Thickness(0,10,0,3); page.Children.Add(t); }
     private void Note(string text)
     {
         var t = Ui.Text(text,12,"Muted"); t.TextWrapping = TextWrapping.Wrap; t.Margin = new Thickness(0,5,0,6); t.LineHeight = 17; page.Children.Add(t);
     }
-    private CheckBox Check(string text, bool value, Action<bool> change)
+    private Wpf.Ui.Controls.ToggleSwitch Check(string text, bool value, Action<bool> change)
     {
-        var c = new CheckBox { Content=value?"Ein":"Aus", IsChecked = value }; c.Click += (_,_) => {c.Content=c.IsChecked==true?"Ein":"Aus"; change(c.IsChecked==true); sidebar.Apply();SettingsText.Apply(this,P.SettingsLanguage); }; SettingRow(text,c);return c;
+        var c = new Wpf.Ui.Controls.ToggleSwitch { OnContent=SettingsText.Translate("Ein",P.SettingsLanguage),OffContent=SettingsText.Translate("Aus",P.SettingsLanguage), IsChecked = value }; c.Click += (_,_) => { change(c.IsChecked==true); sidebar.Apply();SettingsText.Apply(this,P.SettingsLanguage); }; SettingRow(text,c);return c;
     }
     private void Select<T>(string label, IEnumerable<T> values, T selected, Action<T> change)
     {
         var c = new ComboBox { ItemsSource = values, SelectedItem = selected, ItemTemplate=SettingsText.ChoiceTemplate(),HorizontalAlignment = HorizontalAlignment.Stretch,MaxWidth=440 };
         c.SelectionChanged += (_,_) => { if(c.SelectedItem is T item) { change(item); sidebar.Apply(); } }; SettingRow(label,c);
     }
-    private void Slider(string label, double min, double max, double value, double tick, string format, Action<double> change)
+    private void Slider(string label,double min,double max,double value,double tick,string format,Action<double> change)
     {
-        var t = Ui.Text(value.ToString(format),12);t.HorizontalAlignment=HorizontalAlignment.Right;t.VerticalAlignment=VerticalAlignment.Center;
-        var s = new Slider { Minimum = min, Maximum = max, Value = value, TickFrequency = tick, IsSnapToTickEnabled = true, VerticalAlignment=VerticalAlignment.Center };
+        var input=new Wpf.Ui.Controls.NumberBox{Minimum=min,Maximum=max,Value=value,SmallChange=tick,LargeChange=tick*4,MaxDecimalPlaces=format.Contains('.')?2:0,AcceptsExpression=false,SpinButtonPlacementMode=Wpf.Ui.Controls.NumberBoxSpinButtonPlacementMode.Compact,MinWidth=86,Margin=new Thickness(10,0,0,0),VerticalAlignment=VerticalAlignment.Center};
+        System.Windows.Automation.AutomationProperties.SetAutomationId(input,"SettingNumber:"+label);
+        var s=new Slider{Minimum=min,Maximum=max,Value=value,TickFrequency=tick,IsSnapToTickEnabled=true,VerticalAlignment=VerticalAlignment.Center};
         if(label=="Grafikgröße (%)"){System.Windows.Automation.AutomationProperties.SetAutomationId(s,"WholeGraphicSize");s.ToolTip=SettingsText.Translate("Skaliert die ganze Grafik mit Zahl und Einheit. Bei wenig Platz wird die Größe passend begrenzt.",P.SettingsLanguage);}
-        var controls=new Grid();controls.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star)});controls.ColumnDefinitions.Add(new(){Width=new GridLength(54)});controls.Children.Add(s);Grid.SetColumn(t,1);controls.Children.Add(t);
-        if(label=="Schriftgröße (%)"){controls.ColumnDefinitions.Add(new(){Width=GridLength.Auto});var resetText=Ui.Button("↺",()=>{P.FontScale=P.TitleTextScale=P.HardwareTextScale=P.LabelTextScale=P.ValueTextScale=P.InstrumentTextScale=P.UnitTextScale=1;sidebar.Apply();Navigate("Darstellung");});resetText.Padding=new Thickness(4,1,4,1);resetText.Margin=new Thickness(5,0,0,0);resetText.ToolTip="Schriftgröße zurücksetzen (100 %)";System.Windows.Automation.AutomationProperties.SetAutomationId(resetText,"ResetTextSize");Grid.SetColumn(resetText,2);controls.Children.Add(resetText);}
-        s.ValueChanged += (_,_) => { t.Text = s.Value.ToString(format); change(s.Value); sidebar.Apply(); }; SettingRow(label,controls);
+        var controls=new Grid();controls.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star)});controls.ColumnDefinitions.Add(new(){Width=new GridLength(96)});controls.Children.Add(s);Grid.SetColumn(input,1);controls.Children.Add(input);
+        if(label=="Schriftgröße (%)"){controls.ColumnDefinitions.Add(new(){Width=GridLength.Auto});var resetText=ActionButton("↺",()=>{P.FontScale=P.TitleTextScale=P.HardwareTextScale=P.LabelTextScale=P.ValueTextScale=P.InstrumentTextScale=P.UnitTextScale=1;sidebar.Apply();Navigate("Darstellung");});resetText.Padding=new Thickness(5,3,5,3);resetText.Margin=new Thickness(5,0,0,0);resetText.ToolTip="Schriftgröße zurücksetzen (100 %)";System.Windows.Automation.AutomationProperties.SetAutomationId(resetText,"ResetTextSize");Grid.SetColumn(resetText,2);controls.Children.Add(resetText);}
+        bool syncing=false;s.ValueChanged+=(_,_)=>{syncing=true;input.Value=s.Value;syncing=false;change(s.Value);sidebar.Apply();};
+        input.ValueChanged+=(_,args)=>{if(syncing)return;if(args.NewValue is double number&&double.IsFinite(number)){s.Value=Math.Clamp(number,min,max);}else{syncing=true;input.Value=s.Value;syncing=false;}};
+        SettingRow(label,controls);
     }
     private void SettingRow(string label,FrameworkElement control)
     {
-        var row=new Grid {Margin=new Thickness(0,3,0,3),MinHeight=30};row.ColumnDefinitions.Add(new(){Width=new GridLength(185)});row.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star),MaxWidth=440});
+        var row=new Grid {Margin=new Thickness(0,2,0,2),MinHeight=32};row.ColumnDefinitions.Add(new(){Width=new GridLength(185)});row.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star),MaxWidth=440});
         var text=Ui.Text(label,12,"Muted");text.TextWrapping=TextWrapping.Wrap;text.Margin=new Thickness(0,0,12,0);text.VerticalAlignment=VerticalAlignment.Center;row.Children.Add(text);Grid.SetColumn(control,1);control.HorizontalAlignment=HorizontalAlignment.Stretch;control.VerticalAlignment=VerticalAlignment.Center;row.Children.Add(control);page.Children.Add(row);
     }
     private void Navigate(string target)
     {
         current = target;
+        TranslateNavigation();
         pageScroll.ScrollToTop();
         if(target is "Sensoren" or "Eigene Werte")search.Clear();
         switch(target)
@@ -123,7 +133,7 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
                 foreach(var entry in new[]{("Position","Position & Größe","Monitor, Breite, Autostart und Einpassen"),("Darstellung","Design & Schrift","Layout, Farben und Lesbarkeit"),("Geräte","Geräte & Werte","Geräte, sichtbare Werte und eigene Sensoren"),("Karten","Karten & Reihenfolge","Sichtbare Karten und ihre Reihenfolge"),("Voraussetzungen","Sensoren einrichten","Treiber und Sensorzugriff prüfen")})
                 {
                     var content=new StackPanel();var title=Ui.Text(entry.Item2,13);title.FontWeight=FontWeights.SemiBold;content.Children.Add(title);var description=Ui.Text(entry.Item3,11,"Muted");description.TextWrapping=TextWrapping.Wrap;description.Margin=new Thickness(0,2,0,0);content.Children.Add(description);
-                    var button=Ui.Button("",()=>SelectPage(entry.Item1));button.Content=content;button.HorizontalAlignment=HorizontalAlignment.Stretch;button.HorizontalContentAlignment=HorizontalAlignment.Left;button.Margin=new Thickness(0,0,0,5);button.Padding=new Thickness(12,7,12,7);shortcuts.Children.Add(button);
+                    var button=ActionButton("",()=>SelectPage(entry.Item1));button.Content=content;button.HorizontalAlignment=HorizontalAlignment.Stretch;button.HorizontalContentAlignment=HorizontalAlignment.Left;button.Margin=new Thickness(0,0,0,5);button.Padding=new Thickness(12,7,12,7);shortcuts.Children.Add(button);
                 }
                 page.Children.Add(shortcuts);
                 Card("Aktuelle Sidebar",()=>Note("Layout: "+CardLayouts.Get(P.Layout).Name+" · "+P.Columns+" Spalte(n) · "+P.ColumnWidth.ToString("0")+" px pro Spalte\nAutostart: "+(ScheduledAutostart.Enabled?"Ein":"Aus")));
@@ -134,7 +144,7 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
                 var monitors = Forms.Screen.AllScreens.Select((s,i) => new MonitorChoice(s.DeviceName,$"Monitor {i+1} · {s.Bounds.Width} × {s.Bounds.Height}"+(s.Primary ? " · Hauptmonitor" : ""))).ToList();
                 var selected = monitors.FirstOrDefault(m=>m.Id == P.Monitor) ?? monitors.FirstOrDefault(m=>Forms.Screen.PrimaryScreen?.DeviceName == m.Id) ?? monitors[0];
                 Select("Monitor", monitors,selected, m=>P.Monitor=m.Id);
-                var identify=Ui.Button("Monitore identifizieren",()=> {
+                var identify=ActionButton("Monitore identifizieren",()=> {
                     foreach(var (s,i) in Forms.Screen.AllScreens.Select((s,i)=>(s,i)))
                     {
                         var w = new Window { Title = "Monitor "+(i+1), Width = 200, Height = 140, WindowStyle = WindowStyle.None, Topmost = true, ShowInTaskbar = false, Content = new TextBlock { Text = (i+1).ToString(), FontSize = 70, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } };
@@ -180,7 +190,7 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
                 Slider("Instrument-Zahlen",50,200,P.InstrumentTextScale*100,5,"0",v=>P.InstrumentTextScale=v/100);
                 Slider("Instrument-Einheiten",50,200,P.UnitTextScale*100,5,"0",v=>P.UnitTextScale=v/100);
                 });
-                var resetSizes=Ui.Button("Textgrößen zurücksetzen",()=>{P.FontScale=P.TitleTextScale=P.HardwareTextScale=P.LabelTextScale=P.ValueTextScale=P.InstrumentTextScale=P.UnitTextScale=1;sidebar.Apply();Navigate("Textgrößen");});System.Windows.Automation.AutomationProperties.SetAutomationId(resetSizes,"ResetIndividualTextSizes");page.Children.Add(resetSizes);
+                var resetSizes=ActionButton("Textgrößen zurücksetzen",()=>{P.FontScale=P.TitleTextScale=P.HardwareTextScale=P.LabelTextScale=P.ValueTextScale=P.InstrumentTextScale=P.UnitTextScale=1;sidebar.Apply();Navigate("Textgrößen");});System.Windows.Automation.AutomationProperties.SetAutomationId(resetSizes,"ResetIndividualTextSizes");page.Children.Add(resetSizes);
                 break;
             case "Farben":
                 Heading("Text & Diagramme","Textfarben sowie Farben und Stärke der Balken und Instrumente anpassen.");
@@ -201,7 +211,7 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
                     Slider("Linien- / Balkenstärke (%)",50,160,P.GraphScale*100,10,"0",v=>P.GraphScale=v/100);
                 });
                 Note("Leer = Farbe des Farbschemas. Eigene Farben bleiben beim Designwechsel erhalten.");
-                var resetColors=Ui.Button("Farbanpassungen zurücksetzen",()=>{P.TextColor=P.LabelColor=P.HardwareNameColor=P.ValueColor=P.GraphTrackColor=P.SecondaryGraphColor="";P.GraphColors.Clear();P.GraphScale=1;sidebar.Apply();Navigate("Farben");});System.Windows.Automation.AutomationProperties.SetAutomationId(resetColors,"ResetColors");page.Children.Add(resetColors);
+                var resetColors=ActionButton("Farbanpassungen zurücksetzen",()=>{P.TextColor=P.LabelColor=P.HardwareNameColor=P.ValueColor=P.GraphTrackColor=P.SecondaryGraphColor="";P.GraphColors.Clear();P.GraphScale=1;sidebar.Apply();Navigate("Farben");});System.Windows.Automation.AutomationProperties.SetAutomationId(resetColors,"ResetColors");page.Children.Add(resetColors);
                 break;
             case "CPU":
                 Heading("CPU-Temperatur auswählen","Automatisch wird die CPU-/Socket-Temperatur des Mainboards bevorzugt. Du kannst auch einen bestimmten Sensor fest auswählen.");
@@ -214,7 +224,7 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
                     Select(cpu.Name,choices,choices.FirstOrDefault(c=>c.Id==cpuSelected)??choices[0],choice=>{if(choice.Id.Length==0)P.CpuTemperatureSources.Remove(cpu.Id);else P.CpuTemperatureSources[cpu.Id]=choice.Id;});
                     Note("Aktuelle Quelle: "+cpu.Metrics.FirstOrDefault(m=>m.Id.EndsWith("/display-temperature"))?.Source);
                 }
-                page.Children.Add(Ui.Button("CPU-Kartenwerte ein-/ausblenden",()=>SelectPage("Werte")));
+                page.Children.Add(ActionButton("CPU-Kartenwerte ein-/ausblenden",()=>SelectPage("Werte")));
                 Note("CPU, CPU Diode und CPU Package sind verschiedene Messstellen. Fehlt ein CPU-/Socket-Sensor, wird eine verfügbare Package-/Die-Quelle ausdrücklich als solche beschriftet.");
                 break;
             case "Karten":
@@ -222,7 +232,7 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
                 foreach(var category in P.Order.ToArray())
                 {
                     var row = new DockPanel { Margin = new Thickness(0,4,0,4) };
-                    var up = Ui.Button("↑",()=>Move(category,-1)); var down = Ui.Button("↓",()=>Move(category,1));
+                    var up = ActionButton("↑",()=>Move(category,-1)); var down = ActionButton("↓",()=>Move(category,1));
                     DockPanel.SetDock(down,Dock.Right); DockPanel.SetDock(up,Dock.Right); down.Margin = new Thickness(5,0,0,0); row.Children.Add(down); row.Children.Add(up);
                     var check = new CheckBox { Content = Ui.Icon(category)+"  "+category, IsChecked = !P.HiddenCategories.Contains(category) };
                     check.Click += (_,_)=>{ Toggle(P.HiddenCategories,category,check.IsChecked!=true); sidebar.Apply(); }; row.Children.Add(check);var frame=new Border{Child=row,Padding=new Thickness(14,5,14,5),Margin=new Thickness(0,0,0,7),CornerRadius=new CornerRadius(9),BorderThickness=new Thickness(1)};frame.SetResourceReference(Border.BackgroundProperty,"Panel");frame.SetResourceReference(Border.BorderBrushProperty,"Edge");page.Children.Add(frame);
@@ -239,8 +249,8 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
                 Label("Suchen nach Gerät, Sensor oder Typ"); page.Children.Add(search); page.Children.Add(sensorList);
                 Label("Ziel-Widget für den ausgewählten Sensor");page.Children.Add(pinTarget);targetInfo.TextWrapping=TextWrapping.Wrap;page.Children.Add(targetInfo);System.Windows.Automation.AutomationProperties.SetAutomationId(pinTarget,"PinTargetWidget");
                 var buttons = new WrapPanel { Margin = new Thickness(0,15,0,0) };
-                pinAction=Ui.Button("Sensor auswählen",()=>{if(sensorList.SelectedItem is SensorDisplay s)ChangePin(s.Id,!P.Pins.Contains(s.Id));});System.Windows.Automation.AutomationProperties.SetAutomationId(pinAction,"PinSelectedSensor");buttons.Children.Add(pinAction);
-                var switchPage=Ui.Button("Zurück zu Geräte & Werte",()=>SelectPage("Geräte"));switchPage.Margin=new Thickness(8,0,0,0);buttons.Children.Add(switchPage);
+                pinAction=ActionButton("Sensor auswählen",()=>{if(sensorList.SelectedItem is SensorDisplay s)ChangePin(s.Id,!P.Pins.Contains(s.Id));});System.Windows.Automation.AutomationProperties.SetAutomationId(pinAction,"PinSelectedSensor");buttons.Children.Add(pinAction);
+                var switchPage=ActionButton("Zurück zu Geräte & Werte",()=>SelectPage("Geräte"));switchPage.Margin=new Thickness(8,0,0,0);buttons.Children.Add(switchPage);
                 page.Children.Add(buttons); Note("Ziel-Widget auswählen. Häkchen hinzufügen oder entfernen.");
                 UpdateSensors(); break;
             case "Grenzen":
@@ -253,14 +263,14 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
                 Heading("Sensoren einrichten", "Status prüfen und fehlende Komponenten gezielt einrichten. Es wird nichts automatisch installiert.");
                 Label("1 · Laufzeit");Note(System.IO.File.Exists(System.IO.Path.Combine(AppContext.BaseDirectory,"coreclr.dll"))?".NET-Laufzeit ist enthalten – keine zusätzliche Installation nötig.":".NET "+Environment.Version+" ist verfügbar.");
                 Label("2 · Sensortreiber für CPU und Mainboard");Note(SensorAccess.Describe());
-                var install=Ui.Button("PawnIO installieren / aktualisieren",()=>{});
-                install.Click+=async (_,_)=>{install.IsEnabled=false;try{await Prerequisites.InstallPawnIO(this);}catch(Exception error){MessageBox.Show(this,error.Message,"PawnIO-Einrichtung");}finally{install.IsEnabled=true;}};page.Children.Add(install);
+                var install=ActionButton("PawnIO installieren / aktualisieren",()=>{});
+                install.Click+=async (_,_)=>{install.IsEnabled=false;try{await Prerequisites.InstallPawnIO(this);}catch(Exception error){ShowStatus("PawnIO-Einrichtung",error.Message,Wpf.Ui.Controls.InfoBarSeverity.Error);}finally{install.IsEnabled=true;}};page.Children.Add(install);
                 Note("Für CPU- und Mainboard-Sensoren wird PawnIO benötigt.");
                 Label("3 · Automatischer Sensorzugriff");Note(ScheduledAutostart.Describe());
-                page.Children.Add(Ui.Button("Sensorzugriff einmalig einrichten",()=>{try{ScheduledAutostart.RequestAccess();}catch(System.ComponentModel.Win32Exception error)when(error.NativeErrorCode==1223){}catch(Exception error){MessageBox.Show(this,error.Message,"Sensorzugriff");}}));
+                page.Children.Add(ActionButton("Sensorzugriff einmalig einrichten",()=>{try{ScheduledAutostart.RequestAccess();}catch(System.ComponentModel.Win32Exception error)when(error.NativeErrorCode==1223){}catch(Exception error){ShowStatus("Sensorzugriff",error.Message,Wpf.Ui.Controls.InfoBarSeverity.Error);}}));
                 Note("Die Einrichtung benötigt einmalig Administratorrechte.");
                 Label("4 · Grafiktreiber (falls GPU-Werte fehlen)");
-                var drivers=new WrapPanel();foreach(var vendor in new[]{("NVIDIA","https://www.nvidia.com/Download/index.aspx"),("AMD","https://www.amd.com/en/support"),("Intel","https://www.intel.com/content/www/us/en/download-center/home.html")})drivers.Children.Add(Ui.Button(vendor.Item1+" Treiber",()=>Process.Start(new ProcessStartInfo(vendor.Item2){UseShellExecute=true})));page.Children.Add(drivers);
+                var drivers=new WrapPanel();foreach(var vendor in new[]{("NVIDIA","https://www.nvidia.com/Download/index.aspx"),("AMD","https://www.amd.com/en/support"),("Intel","https://www.intel.com/content/www/us/en/download-center/home.html")})drivers.Children.Add(ActionButton(vendor.Item1+" Treiber",()=>Process.Start(new ProcessStartInfo(vendor.Item2){UseShellExecute=true})));page.Children.Add(drivers);
                 Note("Grafiktreiber werden beim Hersteller heruntergeladen.");
                 Select("Aktualisierung (Millisekunden)",new[]{500,1000,2000,5000,10000},P.Interval,v=>P.Interval=v);
                 break;
@@ -268,11 +278,11 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
                 Heading("Systeminfo", "Unterstützung hängt von Hardware, Firmware und Treibern ab.");
                 Note("Autostart wird über die Windows-Aufgabenplanung ausgeführt.");
                 diagnostics.TextWrapping = TextWrapping.Wrap; diagnostics.Margin = new Thickness(0,20,0,20); page.Children.Add(diagnostics);
-                page.Children.Add(Ui.Button("Konfiguration öffnen",()=>Process.Start(new ProcessStartInfo("notepad.exe", "\""+Preferences.Path+"\"") { UseShellExecute = true })));
+                page.Children.Add(ActionButton("Konfiguration öffnen",()=>Process.Start(new ProcessStartInfo("notepad.exe", "\""+Preferences.Path+"\"") { UseShellExecute = true })));
                 Note("Einstellungen werden neben der EXE gespeichert.");
                 Refresh(sidebar.Latest); break;
         }
-        SettingsText.Apply(this,P.SettingsLanguage);
+        SettingsText.Apply(this,P.SettingsLanguage);TranslateNavigation();
     }
     public void SelectDevice(string deviceId){selectedDeviceId=deviceId;SelectPage("Geräte");Navigate("Geräte");}
     private void DevicePage()
@@ -291,17 +301,17 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
     private void RenderDeviceDetails()
     {
         if(deviceDetails==null||sidebar.Latest==null||selectedDeviceId==null)return;
-        var device=PinPlacement.Compose(sidebar.Latest,P).FirstOrDefault(d=>d.Id==selectedDeviceId);if(device==null)return;deviceDetails.Children.Clear();int start=page.Children.Count;
+        var device=PinPlacement.Compose(sidebar.Latest,P).FirstOrDefault(d=>d.Id==selectedDeviceId);if(device==null)return;foreach(UIElement child in deviceDetails.Children)PreserveControlResources(child);deviceDetails.Children.Clear();int start=page.Children.Count;
         var title=Ui.Text(P.HardwareName(device.Id,device.Name),15);System.Windows.Automation.AutomationProperties.SetAutomationId(title,"DeviceNamePreview");title.FontWeight=FontWeights.SemiBold;title.TextWrapping=TextWrapping.Wrap;title.Margin=new Thickness(0,0,0,8);page.Children.Add(title);
         HardwareNameEditor(device);
         var enabledControl=Check("Gerät anzeigen",!P.HiddenDevices.Contains(device.Id)&&!P.HiddenCategories.Contains(device.Category),enabled=>{Toggle(P.HiddenDevices,device.Id,!enabled);if(enabled)P.HiddenCategories.RemoveAll(s=>s==device.Category);});System.Windows.Automation.AutomationProperties.SetAutomationId(enabledControl,"DeviceVisible:"+device.Id);
         if(device.Category=="Network"){
-            var refresh=Ui.Button(addressBusy?"IP-Adressen werden abgerufen …":"IP-Adressen abrufen / aktualisieren",()=>{});refresh.IsEnabled=!addressBusy;System.Windows.Automation.AutomationProperties.SetAutomationId(refresh,"RefreshNetworkAddresses");
+            var refresh=ActionButton(addressBusy?"IP-Adressen werden abgerufen …":"IP-Adressen abrufen / aktualisieren",()=>{});refresh.IsEnabled=!addressBusy;System.Windows.Automation.AutomationProperties.SetAutomationId(refresh,"RefreshNetworkAddresses");
             refresh.Click+=async(_,_)=>{
                 if(addressBusy)return;addressBusy=true;refresh.IsEnabled=false;refresh.Content=SettingsText.Translate("IP-Adressen werden abgerufen …",P.SettingsLanguage);
-                try{P.NetworkAddresses.TryGetValue(device.Id,out var previous);var result=await addressLookup.FetchAsync(device.Id,previous,P.IsMetricVisible(device.Id,device.Id+"/external-ip"),addressCancellation.Token);if(addressCancellation.IsCancellationRequested)return;P.NetworkAddresses[device.Id]=result.State;sidebar.Apply();if(result.ExternalFailed)MessageBox.Show(this,SettingsText.Translate("Externe IP nicht erreichbar. Der bisherige Wert bleibt gespeichert.",P.SettingsLanguage),"IP");}
+                try{P.NetworkAddresses.TryGetValue(device.Id,out var previous);var result=await addressLookup.FetchAsync(device.Id,previous,P.IsMetricVisible(device.Id,device.Id+"/external-ip"),addressCancellation.Token);if(addressCancellation.IsCancellationRequested)return;P.NetworkAddresses[device.Id]=result.State;sidebar.Apply();if(result.ExternalFailed)ShowStatus("IP","Externe IP nicht erreichbar. Der bisherige Wert bleibt gespeichert.",Wpf.Ui.Controls.InfoBarSeverity.Warning);}
                 catch(OperationCanceledException){}
-                catch(Exception){if(!addressCancellation.IsCancellationRequested)MessageBox.Show(this,SettingsText.Translate("IP-Abfrage fehlgeschlagen. Gespeicherte Werte bleiben erhalten.",P.SettingsLanguage),"IP");}
+                catch(Exception){if(!addressCancellation.IsCancellationRequested)ShowStatus("IP","IP-Abfrage fehlgeschlagen. Gespeicherte Werte bleiben erhalten.",Wpf.Ui.Controls.InfoBarSeverity.Warning);}
                 finally{addressBusy=false;if(!addressCancellation.IsCancellationRequested&&current=="Geräte")RenderDeviceDetails();}
             };
             page.Children.Add(refresh);Note("IP-Adressen werden nur per Button abgerufen und gespeichert. Keine automatische Aktualisierung.");Note("Externe IP: api64.ipify.org über die Standardroute, nicht zwingend über den ausgewählten Adapter.");
@@ -315,26 +325,28 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
         {
             var metric=device.Metrics.FirstOrDefault(m=>m.Id==id)??new Metric(id,id,null,"");
             var controls=new StackPanel{Orientation=Orientation.Horizontal};var visible=new CheckBox{Content=metric.Display(P.Fahrenheit),IsChecked=P.IsMetricVisible(device.Id,id),VerticalAlignment=VerticalAlignment.Center};visible.Click+=(_,_)=>{P.SetMetricVisible(device.Id,id,visible.IsChecked==true);sidebar.Apply();};controls.Children.Add(visible);
-            var remove=Ui.Button("Entfernen",()=>{PinPlacement.SetPinned(sidebar.Latest,P,id,false);sidebar.Apply();RenderDeviceDetails();});remove.Margin=new Thickness(8,0,0,0);System.Windows.Automation.AutomationProperties.SetAutomationId(remove,"RemovePin:"+id);controls.Children.Add(remove);SettingRow(metric.Label,controls);
+            var remove=ActionButton("Entfernen",()=>{PinPlacement.SetPinned(sidebar.Latest,P,id,false);sidebar.Apply();RenderDeviceDetails();});remove.Margin=new Thickness(8,0,0,0);System.Windows.Automation.AutomationProperties.SetAutomationId(remove,"RemovePin:"+id);controls.Children.Add(remove);SettingRow(metric.Label,controls);
         }
-        var add=Ui.Button("Sensor hinzufügen",()=>{pendingTarget=device.Id;Navigate("Sensoren");});add.Margin=new Thickness(0,6,0,8);page.Children.Add(add);
+        var add=ActionButton("Sensor hinzufügen",()=>{pendingTarget=device.Id;Navigate("Sensoren");});add.Margin=new Thickness(0,6,0,8);page.Children.Add(add);
         if(device.Category=="CPU")
         {
             Label("CPU-Temperaturquelle");var choices=new List<SensorChoice>{new("","Automatisch: CPU / Socket bevorzugen")};choices.AddRange(sidebar.Latest.Sensors.Where(s=>s.Kind=="Temperature"&&(s.HardwareKind is "SuperIO" or "Motherboard" or "EmbeddedController"||s.Id.StartsWith(device.Id+"/",StringComparison.Ordinal))).Select(s=>new SensorChoice(s.Id,s.Device+" · "+s.Name)));P.CpuTemperatureSources.TryGetValue(device.Id,out string? selected);
             Select("Temperatursensor",choices,choices.FirstOrDefault(c=>c.Id==selected)??choices[0],choice=>{if(choice.Id.Length==0)P.CpuTemperatureSources.Remove(device.Id);else P.CpuTemperatureSources[device.Id]=choice.Id;});
         }
-        var children=page.Children.Cast<UIElement>().Skip(start).ToArray();foreach(var child in children){page.Children.Remove(child);deviceDetails.Children.Add(child);}SettingsText.Apply(this,P.SettingsLanguage);
+        var children=page.Children.Cast<UIElement>().Skip(start).ToArray();foreach(var child in children){PreserveControlResources(child);page.Children.Remove(child);deviceDetails.Children.Add(child);}SettingsText.Apply(this,P.SettingsLanguage);
     }
+    // Keep scoped templates and their animation resources available when fields are moved or reused.
+    private void PreserveControlResources(UIElement child){if(child is FrameworkElement element&&!element.Resources.MergedDictionaries.Contains(Resources))element.Resources.MergedDictionaries.Add(Resources);}
     private void Card(string title,Action build)
     {
         int start=page.Children.Count;build();var body=new StackPanel();var heading=Ui.Text(title,13);heading.FontWeight=FontWeights.SemiBold;heading.Margin=new Thickness(0,0,0,5);body.Children.Add(heading);
-        var children=page.Children.Cast<UIElement>().Skip(start).ToArray();foreach(var child in children){page.Children.Remove(child);body.Children.Add(child);}
+        var children=page.Children.Cast<UIElement>().Skip(start).ToArray();foreach(var child in children){PreserveControlResources(child);page.Children.Remove(child);body.Children.Add(child);}
         var frame=new Wpf.Ui.Controls.Card{Content=body,Padding=new Thickness(14,8,14,8),Margin=new Thickness(0,0,0,8),BorderThickness=new Thickness(1),HorizontalContentAlignment=HorizontalAlignment.Stretch};frame.SetResourceReference(Control.BackgroundProperty,"Panel");frame.SetResourceReference(Control.BorderBrushProperty,"Edge");page.Children.Add(frame);
     }
     private void Section(string title,bool expanded,Action build)
     {
         int start=page.Children.Count;build();var body=new StackPanel {Margin=new Thickness(6,3,6,5)};
-        var children=page.Children.Cast<UIElement>().Skip(start).ToArray();foreach(var child in children){page.Children.Remove(child);body.Children.Add(child);}
+        var children=page.Children.Cast<UIElement>().Skip(start).ToArray();foreach(var child in children){PreserveControlResources(child);page.Children.Remove(child);body.Children.Add(child);}
         var caption=Ui.Text(title,13);caption.FontWeight=FontWeights.SemiBold;caption.TextWrapping=TextWrapping.Wrap;
         var expander=new Expander {Header=caption,IsExpanded=expanded,Content=body,Padding=new Thickness(7)};
         var frame=new Border{Child=expander,CornerRadius=new CornerRadius(6),BorderThickness=new Thickness(1),Margin=new Thickness(0,0,0,6)};frame.SetResourceReference(Border.BackgroundProperty,"Panel");frame.SetResourceReference(Border.BorderBrushProperty,"Edge");page.Children.Add(frame);
@@ -345,7 +357,12 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
         if(j<0 || j>=P.Order.Count) return;
         (P.Order[i],P.Order[j])=(P.Order[j],P.Order[i]); sidebar.Apply(); Navigate("Karten");
     }
-    private void SelectPage(string name){if(name is "Werte" or "Eigene Werte")name="Geräte";var item=nav.Items.OfType<ListBoxItem>().FirstOrDefault(i=>i.Tag as string==name);if(item!=null){nav.SelectedItem=item;if(current!=name)Navigate(name);}else Navigate(name);}
+    private void SelectPage(string name){if(name is "Werte" or "Eigene Werte")name="Geräte";var item=nav.MenuItems.OfType<Wpf.Ui.Controls.NavigationViewItem>().FirstOrDefault(i=>i.Tag as string==name);if(item!=null&&navigationReady){if(!nav.Navigate(name))Navigate(name);}else{foreach(var entry in nav.MenuItems.OfType<Wpf.Ui.Controls.NavigationViewItem>())entry.IsActive=entry==item;Navigate(name);}}
+    private void TranslateNavigation(){foreach(var item in nav.MenuItems.OfType<Wpf.Ui.Controls.NavigationViewItem>())if(item.Tag is string key&&navigationLabels.TryGetValue(key,out var label))item.Content=SettingsText.Translate(label,P.SettingsLanguage);}
+    private Button ActionButton(string text,Action click){var button=new Wpf.Ui.Controls.Button{Content=text,Padding=new Thickness(10,6,10,6)};button.Click+=(_,_)=>click();return button;}
+    private void ShowStatus(string title,string message,Wpf.Ui.Controls.InfoBarSeverity severity){status.Title=SettingsText.Translate(title,P.SettingsLanguage);status.Message=SettingsText.Translate(message,P.SettingsLanguage);status.Severity=severity;status.IsOpen=true;}
+    private sealed class SettingsPageProvider:Wpf.Ui.Abstractions.INavigationViewPageProvider{private readonly FrameworkElement content;public SettingsPageProvider(FrameworkElement content){this.content=content;}public object GetPage(Type pageType)=>content;}
+    private sealed class OverviewSettingsPage:Page{} private sealed class PositionSettingsPage:Page{} private sealed class AppearanceSettingsPage:Page{} private sealed class TypographySettingsPage:Page{} private sealed class ColorsSettingsPage:Page{} private sealed class DevicesSettingsPage:Page{} private sealed class CardsSettingsPage:Page{} private sealed class LimitsSettingsPage:Page{} private sealed class SetupSettingsPage:Page{} private sealed class SystemSettingsPage:Page{}
     private void MetricChecks(Device device)
     {
         foreach(var metric in device.Metrics)
@@ -388,14 +405,14 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
     {
         var grid=new Grid();grid.ColumnDefinitions.Add(new(){Width=new GridLength(104)});grid.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star)});grid.ColumnDefinitions.Add(new(){Width=GridLength.Auto});
         var input=new TextBox{MaxLength=7,Padding=new Thickness(7,4,7,4),VerticalContentAlignment=VerticalAlignment.Center,ToolTip="#RRGGBB"};System.Windows.Automation.AutomationProperties.SetAutomationId(input,id);
-        var pick=Ui.Button("Auswählen",()=>{});pick.Margin=new Thickness(6,0,6,0);pick.HorizontalAlignment=HorizontalAlignment.Stretch;var swatch=new Border{Width=13,Height=13,Margin=new Thickness(0,0,6,0),BorderBrush=System.Windows.Media.Brushes.Gray,BorderThickness=new Thickness(1)};
+        var pick=ActionButton("Auswählen",()=>{});pick.Margin=new Thickness(6,0,6,0);pick.HorizontalAlignment=HorizontalAlignment.Stretch;var swatch=new Border{Width=13,Height=13,Margin=new Thickness(0,0,6,0),BorderBrush=System.Windows.Media.Brushes.Gray,BorderThickness=new Thickness(1)};
         var content=new StackPanel{Orientation=Orientation.Horizontal};content.Children.Add(swatch);content.Children.Add(Ui.Text("Auswählen",12));pick.Content=content;
         bool refreshing=false;
         void Refresh(){refreshing=true;input.Text=get();swatch.Background=Ui.Brush(DesignCatalog.ColorOr(get(),fallback()));input.ClearValue(BorderBrushProperty);refreshing=false;}
         input.Tag=(Action)Refresh;
         input.TextChanged+=(_,_)=>{if(refreshing)return;string value=input.Text.Trim();if(value.Length>0&&DesignCatalog.ColorOr(value,"").Length==0){input.BorderBrush=Ui.Brush("#F47777");return;}set(value.Length==0?"":DesignCatalog.ColorOr(value,""));input.ClearValue(BorderBrushProperty);swatch.Background=Ui.Brush(DesignCatalog.ColorOr(get(),fallback()));sidebar.Apply();};
         pick.Click+=(_,_)=>{using var dialog=new Forms.ColorDialog{FullOpen=true,Color=System.Drawing.ColorTranslator.FromHtml(DesignCatalog.ColorOr(get(),fallback()))};if(dialog.ShowDialog(new FormsOwner(new System.Windows.Interop.WindowInteropHelper(this).Handle))==Forms.DialogResult.OK)input.Text=$"#{dialog.Color.R:X2}{dialog.Color.G:X2}{dialog.Color.B:X2}";};
-        var reset=Ui.Button("↺",()=>{input.Text="";Refresh();});reset.ToolTip="Standardfarbe";System.Windows.Automation.AutomationProperties.SetAutomationId(reset,"Reset:"+id);
+        var reset=ActionButton("↺",()=>{input.Text="";Refresh();});reset.ToolTip="Standardfarbe";System.Windows.Automation.AutomationProperties.SetAutomationId(reset,"Reset:"+id);
         grid.Children.Add(input);Grid.SetColumn(pick,1);grid.Children.Add(pick);Grid.SetColumn(reset,2);grid.Children.Add(reset);Refresh();SettingRow(label,grid);return input;
     }
     private sealed class FormsOwner:Forms.IWin32Window{public IntPtr Handle{get;}public FormsOwner(IntPtr handle){Handle=handle;}}
@@ -428,8 +445,8 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
         void Save(bool reset){P.SetHardwareName(device.Id,reset?null:input.Text);sidebar.Apply();Navigate("Geräte");}
         input.KeyDown+=(_,e)=>{if(e.Key==System.Windows.Input.Key.Enter){e.Handled=true;Save(false);}};
         var buttons=new StackPanel{Orientation=Orientation.Horizontal,Margin=new Thickness(0,6,0,8)};
-        var save=Ui.Button("Übernehmen",()=>Save(false));System.Windows.Automation.AutomationProperties.SetAutomationId(save,"SaveHardwareName");buttons.Children.Add(save);
-        var reset=Ui.Button("Originalname wiederherstellen",()=>Save(true));reset.Margin=new Thickness(8,0,0,0);System.Windows.Automation.AutomationProperties.SetAutomationId(reset,"ResetHardwareName");buttons.Children.Add(reset);page.Children.Add(buttons);
+        var save=ActionButton("Übernehmen",()=>Save(false));System.Windows.Automation.AutomationProperties.SetAutomationId(save,"SaveHardwareName");buttons.Children.Add(save);
+        var reset=ActionButton("Originalname wiederherstellen",()=>Save(true));reset.Margin=new Thickness(8,0,0,0);System.Windows.Automation.AutomationProperties.SetAutomationId(reset,"ResetHardwareName");buttons.Children.Add(reset);page.Children.Add(buttons);
     }
     private void LayoutPicker()
     {
@@ -437,12 +454,12 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
     }
     private void StartupCheckbox()
     {
-        var check=new CheckBox { Content="Mit Windows starten", IsChecked=ScheduledAutostart.Enabled };
+        var check=new Wpf.Ui.Controls.ToggleSwitch { OnContent=SettingsText.Translate("Ein",P.SettingsLanguage),OffContent=SettingsText.Translate("Aus",P.SettingsLanguage), IsChecked=ScheduledAutostart.Enabled };
         startupCheck=check;
         check.Click+=(_,_)=>{
             try { ScheduledAutostart.Request(check.IsChecked==true); }
             catch(System.ComponentModel.Win32Exception error) when(error.NativeErrorCode==1223) { }
-            catch(Exception error) { MessageBox.Show(error.Message,"Autostart konnte nicht geändert werden"); }
+            catch(Exception error) { ShowStatus("Autostart konnte nicht geändert werden",error.Message,Wpf.Ui.Controls.InfoBarSeverity.Error); }
             check.IsChecked=ScheduledAutostart.Enabled;
         };
         SettingRow("Autostart",check);

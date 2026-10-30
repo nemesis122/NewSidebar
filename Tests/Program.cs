@@ -13,6 +13,11 @@ Require(JsonSerializer.Deserialize<Preferences>(JsonSerializer.Serialize(new Pre
 Require(SensorSources.Normalize("invalid")==SensorSources.Libre,"Unknown sources normalize to Libre");
 Require(SensorSources.OpenId("/cpu/0")!=SensorSources.BridgeId("/cpu/0"),"Direct and bridge sensor IDs are distinct");
 Require(SensorSources.Finite(double.NaN)==null&&SensorSources.Finite(double.PositiveInfinity)==null&&SensorSources.Finite(0)==0,"Invalid sensor numbers stay unavailable while zero remains valid");
+Require(JsonSerializer.Deserialize<Preferences>("{}")!.HardwareIconScale==1,"Existing settings keep hardware icons at 100 percent");
+Require(JsonSerializer.Deserialize<Preferences>(JsonSerializer.Serialize(new Preferences{HardwareIconScale=.5,ShowHardwareIcons=false}))!.HardwareIconScale==.5,"Hardware icon size survives restart while hidden");
+Require(JsonSerializer.Deserialize<Preferences>("{}")!.ShowHardwareIcons,"Existing settings show hardware icons by default");
+Require(!JsonSerializer.Deserialize<Preferences>(JsonSerializer.Serialize(new Preferences{ShowHardwareIcons=false}))!.ShowHardwareIcons,"Hidden hardware icons survive restart");
+Require(new Preferences{ShowHardwareIcons=false}.ShowWidgetTitles&&new Preferences{ShowHardwareIcons=false}.ShowHardwareNames,"Icon visibility does not change text visibility defaults");
 string portableRoot=Path.Combine(Path.GetTempPath(),"NemeSIS-startup-tests-"+Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(Path.Combine(portableRoot,"OEM"));Directory.CreateDirectory(Path.Combine(portableRoot,"Downloads"));
 string oemExe=Path.Combine(portableRoot,"OEM","Sidebar.exe"),downloadExe=Path.Combine(portableRoot,"Downloads","Sidebar.exe");
@@ -152,3 +157,4 @@ static class TestProcessSafety{[System.Runtime.InteropServices.DllImport("kernel
 
 
 
+ 

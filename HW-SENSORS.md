@@ -1,6 +1,6 @@
 # HW Sensors – Originaldesigns in einer gemeinsamen Kachel
 
-Erweiterung in Sidebar by NemeSIS v2.21.2.4.
+Enthalten in Sidebar by NemeSIS v2.22.0.0.
 
 ## Verwendung
 
@@ -29,7 +29,7 @@ Das portable Windows-x64-Paket enthält .NET 8.0.33. Eine separate .NET-Installa
 
 Die beiden oberen Sidebar-Buttons verwenden neue, skalierbare Linien-Vektoren: ein Zahnrad für Einstellungen und einen Pfeil ins Tray für das Ausblenden. Beide haben eine 32 × 32 Pixel große, abgerundete Schaltfläche mit Hover-, Tastaturfokus- und Druckzustand. Sie bleiben unabhängig von Hardware-Symbolgröße und Schriftwahl. Bei sehr schmaler Sidebar bleibt der Einstellungsbutton sichtbar; Ausblenden ist weiterhin auch im Kontextmenü möglich.
 
-Diese Fassung meldet Version **2.21.2.4** in den Systeminformationen. Das Einstellungsmenü bleibt in der bisherigen Gestaltung. Zum Testen die alte Sidebar beenden und die neue EXE aus diesem Paket starten. Die bisherigen Designvorschläge sind nicht Teil der Anwendung.
+Diese Fassung meldet Version **2.22.0.0** in den Systeminformationen. Das Einstellungsmenü bleibt in der bisherigen Gestaltung. Zum Testen die alte Sidebar beenden und die neue EXE aus diesem Paket starten. Die bisherigen Designvorschläge sind nicht Teil der Anwendung.
 
 ## Intel-CPU-Takt korrigiert
 
@@ -71,4 +71,5 @@ Ein fehlender bevorzugter GPU-Takt verdeckt keinen verfügbaren Render-Takt mehr
 Mehrfaches Starten des Sensordienstes erzeugt keinen zweiten Worker. Bei vollständig ausgeblendeten Karten erscheint der vorhandene Leerzustand-Hinweis. Tests prüfen Start, Verbergen, Wiederherstellen, Einstellungen erneut öffnen und geordnetes Schließen mit Freigabe des Sensorzugriffs.
 
 Der mitgelieferte APP-PRUEFBERICHT.txt unterscheidet Live-Messungen, Wiedergabe der aufgenommenen Sensordaten, automatisierte Funktionsprüfungen und nicht ausgeführte Systemänderungen. Hardware ohne bereitgestellte Sensoren bleibt nicht verfügbar. Ein universeller Nachweis auf allen Hardwareplattformen ist damit nicht verbunden.
+
 

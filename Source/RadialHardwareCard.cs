@@ -64,13 +64,14 @@ public sealed class RadialHardwareCard:Border,IHardwareCard
   protected override Size MeasureOverride(Size available)
   {
    double width=double.IsFinite(available.Width)?Math.Max(0,available.Width):400;double textWidth=TextWidth(value,font);double nextFont=textWidth>width?Math.Max(Math.Min(8,font),font*width/Math.Max(1,textWidth)):font;if(Math.Abs(value.FontSize-nextFont)>.01)value.FontSize=nextFont;
-   inline=TextWidth(label)+TextWidth(value)+7<=width;label.TextWrapping=inline?TextWrapping.NoWrap:TextWrapping.Wrap;
+   double remaining=width-TextWidth(value)-7;
+   inline=TextWidth(label)<=remaining||remaining>=38;label.TextWrapping=inline?TextWrapping.NoWrap:TextWrapping.Wrap;label.TextTrimming=inline?TextTrimming.CharacterEllipsis:TextTrimming.None;
    value.Measure(new Size(width,double.PositiveInfinity));label.Measure(new Size(inline?Math.Max(0,width-value.DesiredSize.Width-7):width,double.PositiveInfinity));
    return new Size(width,inline?Math.Max(label.DesiredSize.Height,value.DesiredSize.Height):label.DesiredSize.Height+value.DesiredSize.Height);
   }
   protected override Size ArrangeOverride(Size size)
   {
-   double valueWidth=Math.Min(size.Width,value.DesiredSize.Width),naturalHeight=inline?Math.Max(label.DesiredSize.Height,value.DesiredSize.Height):label.DesiredSize.Height+value.DesiredSize.Height,top=Math.Max(0,(size.Height-naturalHeight)/2);label.Arrange(new Rect(0,top,inline?Math.Max(0,size.Width-valueWidth-7):size.Width,label.DesiredSize.Height));value.Arrange(new Rect(inline?size.Width-valueWidth:0,top+(inline?0:label.DesiredSize.Height),valueWidth,value.DesiredSize.Height));return size;
+   double valueWidth=Math.Min(size.Width,value.DesiredSize.Width),naturalHeight=inline?Math.Max(label.DesiredSize.Height,value.DesiredSize.Height):label.DesiredSize.Height+value.DesiredSize.Height,top=Math.Max(0,(size.Height-naturalHeight)/2);label.Arrange(new Rect(0,top,inline?Math.Max(0,size.Width-valueWidth-7):size.Width,label.DesiredSize.Height));value.Arrange(new Rect(size.Width-valueWidth,top+(inline?0:label.DesiredSize.Height),valueWidth,value.DesiredSize.Height));return size;
   }
  }
  private sealed class Dial

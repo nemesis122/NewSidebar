@@ -20,10 +20,11 @@ public static class CardLayouts
  {
   if(instrument!=null)System.Windows.Automation.AutomationProperties.SetAutomationId(instrument,"CardInstrument");
   double requested=Preferences.TextFactor(prefs.InstrumentScale);
-  if(instrument!=null&&requested!=1){
+  if(instrument!=null&&(requested!=1||!ReadingsBelow(prefs))){
    double natural=double.IsFinite(instrument.Width)?instrument.Width:instrument is Panel figurePanel&&figurePanel.Children.OfType<FrameworkElement>().FirstOrDefault() is FrameworkElement graphic&&double.IsFinite(graphic.Width)?graphic.Width+instrument.Margin.Left+instrument.Margin.Right:112;
-   double room=Math.Max(40,Math.Max(200,prefs.ColumnWidth)-48-(!ReadingsBelow(prefs)?80:0));
-   double applied=Math.Min(requested,Math.Max(1,room/natural));
+   double readingRoom=Math.Max(88,78*prefs.FontScale*Preferences.TextFactor(prefs.ValueTextScale));
+   double room=Math.Max(40,Math.Max(200,prefs.ColumnWidth)-48-(!ReadingsBelow(prefs)?readingRoom:0));
+   double applied=Math.Min(requested,Math.Max(ReadingsBelow(prefs)?1:.35,room/natural));
    instrument.LayoutTransform=new ScaleTransform(applied,applied);
    if(!ReadingsBelow(prefs))content.ColumnDefinitions[0].Width=new GridLength(content.ColumnDefinitions[0].Width.Value*applied);
   }

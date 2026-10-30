@@ -1,8 +1,12 @@
-Sidebar by NemeSIS v2.21.2.4
+Sidebar by NemeSIS v2.22.0.0
 
 A portable Windows hardware sidebar with **69 layouts**, **14 color themes**, native **WPF UI 4.3.0 settings** and selectable embedded sensor sources. This release includes the designs and text-visibility controls developed since v2.18.0.
 
-## New in v2.21.2.4
+## New in v2.22.0.0
+
+Original designs are more compact and readable on narrow sidebars. Instruments reserve room for complete readings, long labels use compact presentation, and stacked values align to the right. Performance HUD no longer places clock/fan readings beyond a 200 px card edge. All 69 layouts retain their original character, with 139 additional readability checks at 200 and 300 px.
+
+## Retained from v2.21.2.4
 
 - Optional **HW Sensors** tile: all selected hardware sections share one outer frame while retaining their original design, instruments and histories in all 69 layouts. Enable it under **Cards & order**.
 - CPU clock detection recognizes Intel, AMD and hybrid-core sensor names. CPU frequencies use two decimals, for example **4.11 GHz**; unavailable readings remain unavailable.
@@ -65,11 +69,11 @@ The flat Fluent settings menu retains synchronized sliders and numeric fields, s
 
 ## Download and upgrade
 
-[Download the portable v2.21.2.4 package](https://github.com/nemesis122/NewSidebar/releases/download/v2.21.2.4/Sidebar-v2.21.2.4-Portable.zip). **Windows 10/11 x64; .NET 8.0.33 is bundled.** No application installer or separate .NET installation is required. **The EXE is unsigned**; Windows reputation warnings can still appear.
+[Download the portable v2.22.0.0 package](https://github.com/nemesis122/NewSidebar/releases/download/v2.22.0.0/Sidebar-v2.22.0.0-Portable.zip). **Windows 10/11 x64; .NET 8.0.33 is bundled.** No application installer or separate .NET installation is required. **The EXE is unsigned**; Windows reputation warnings can still appear.
 
 1. Exit the previous copy through its notification-area icon.
 2. Extract the portable package into your chosen writable folder. Keep **aurora-settings.json** beside it to retain your settings; different folders have separate settings.
-3. Start the new EXE and verify **2.21.2.4** and the launched path under **System information**.
+3. Start the new EXE and verify **2.22.0.0** and the launched path under **System information**.
 
 Some CPU/mainboard readings require **PawnIO and administrator access**, configured under **Setup**. Moving an existing startup task to a new EXE may require one Windows approval; startup on/off and delay are retained. No startup task is created automatically on a fresh PC. Available readings depend on hardware, firmware, vendor drivers and account permissions.
 
@@ -87,11 +91,11 @@ All layout previews use **demo hardware and simulated readings**, rendered with 
 
 ## Validation and source
 
-**92,654 native UI checks**, **3,864 layout/color/width render combinations**, **181 data/configuration checks** and **124 sensor checks** passed. An optional replay of recorded hardware snapshots passes **185 sensor checks in total**, including the 124 base checks. The UI suite includes 18 application lifecycle checks covering startup, tray hide/restore, reopening settings, monitor fallback, card order, warnings, empty selection and backend shutdown.
+**92,793 native UI checks**, **3,864 layout/color/width render combinations**, **181 data/configuration checks** and **124 sensor checks** passed. An optional replay of recorded hardware snapshots passes **185 sensor checks in total**, including the 124 base checks. The UI suite includes 18 application lifecycle checks covering startup, tray hide/restore, reopening settings, monitor fallback, card order, warnings, empty selection and backend shutdown.
 
 Administrator hardware captures cover both embedded sources. Storage merge fixes were verified against all 15 recorded source pairs and separate fixtures. The release contains no personal measurements or local configuration. AMD/NVIDIA and other hardware variants are covered by fixtures, not a physical compatibility lab. No fresh Windows installation, driver reinstall, actual logon/reboot or long-duration test was performed. Missing sensors remain unavailable.
 
-The portable EXE reports **2.21.2.4** with .NET **8.0.33**, LibreHardwareMonitor **0.9.6.0**, modified OHM **1.0.9513.1** and zero OHM embedded resources. The release source archive includes the matching source, tests, build script and MPL-2.0 modifications.
+The portable EXE reports **2.22.0.0** with .NET **8.0.33**, LibreHardwareMonitor **0.9.6.0**, modified OHM **1.0.9513.1** and zero OHM embedded resources. The release source archive includes the matching source, tests, build script and MPL-2.0 modifications.
 
 Build on Windows with the .NET 8 SDK:
 
@@ -103,3 +107,5 @@ dotnet run --project SensorTests/SensorChecks.csproj -c Release
 ~~~
 
 Sensor checks use fixtures by default; hardware polling is an explicit optional test. See **THIRD-PARTY-NOTICES.txt**, **Licenses/**, **OpenHardwareMonitor.Driverless/README.md** and **SHA256SUMS.txt** for sources, modifications, licenses and uploaded asset checksums.
+
+Package temperature captions are shortened to **Temp**. Sensor-card tooltips are disabled; settings and application controls retain their normal help.

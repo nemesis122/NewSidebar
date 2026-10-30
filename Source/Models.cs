@@ -25,6 +25,8 @@ public sealed class Preferences
     public int Columns { get; set; } = 1;
     public bool ExpandMultiColumnReadings { get; set; }
     public bool ShowWidgetTitles {get;set;}=true;
+    public bool ShowHardwareIcons {get;set;}=true;
+    public double HardwareIconScale {get;set;}=1;
     public bool ShowHardwareNames {get;set;}=true;
     public bool ShowLabels {get;set;}=true;
     public bool ShowReadings {get;set;}=true;
@@ -90,7 +92,7 @@ public sealed class Preferences
             p.Opacity = Math.Clamp(p.Opacity, 0, 1);
             p.Interval = Math.Clamp(p.Interval, 500, 10000);
             p.FontScale = Math.Clamp(p.FontScale, .65, 1.4);
-            p.TitleTextScale=TextFactor(p.TitleTextScale);p.HardwareTextScale=TextFactor(p.HardwareTextScale);p.LabelTextScale=TextFactor(p.LabelTextScale);p.ValueTextScale=TextFactor(p.ValueTextScale);p.InstrumentTextScale=TextFactor(p.InstrumentTextScale);p.UnitTextScale=TextFactor(p.UnitTextScale);
+            p.HardwareIconScale=TextFactor(p.HardwareIconScale);p.TitleTextScale=TextFactor(p.TitleTextScale);p.HardwareTextScale=TextFactor(p.HardwareTextScale);p.LabelTextScale=TextFactor(p.LabelTextScale);p.ValueTextScale=TextFactor(p.ValueTextScale);p.InstrumentTextScale=TextFactor(p.InstrumentTextScale);p.UnitTextScale=TextFactor(p.UnitTextScale);
             p.InstrumentScale=TextFactor(p.InstrumentScale);
             p.GraphScale = double.IsFinite(p.GraphScale)?Math.Clamp(p.GraphScale,.5,1.6):1; p.GraphColors ??= new();
             p.NetworkAddresses ??= new();p.VisibleNetworkAddresses ??= new();

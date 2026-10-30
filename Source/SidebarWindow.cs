@@ -173,6 +173,7 @@ public static class Ui
             "Network"=>"M5,15 C0,15 0,8 5,8 C5,1 15,1 15,8 C21,8 21,15 16,15 M10,7 L10,18 M7,15 L10,18 13,15",
             _=>"M10,1 L19,10 10,19 1,10 Z M10,6 L10,14 M6,10 L14,10" };
         var icon=new System.Windows.Shapes.Path { Data=Geometry.Parse(path),Width=size,Height=size,StrokeThickness=1.15,Stretch=Stretch.Uniform,Margin=new Thickness(0,0,8,0),VerticalAlignment=VerticalAlignment.Center };
+        System.Windows.Automation.AutomationProperties.SetAutomationId(icon,"HardwareIcon");
         icon.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty,"Text"); return icon;
     }
 }

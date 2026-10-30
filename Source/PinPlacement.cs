@@ -36,6 +36,7 @@ public static class PinPlacement
         {
             var sensor=snapshot.Sensors.FirstOrDefault(s=>s.Id==id);var target=Target(snapshot,prefs,id);var destination=devices.FirstOrDefault(d=>d.Id==target?.Id);
             var metric=sensor==null?new Metric(id,"Nicht verfügbar · "+id,null,""):new Metric(sensor.Id,destination==null?sensor.Device+" · "+sensor.Name:sensor.Name,sensor.Value,sensor.Unit,Maximum(sensor.Unit),sensor.Device+" · "+sensor.Name);
+            if(sensor?.Kind=="Clock"&&sensor.HardwareKind=="Cpu")metric=metric with{IsCpuClock=true};
             if(destination!=null){if(!destination.Metrics.Any(m=>m.Id==id))destination.Metrics.Add(metric);}else separate.Add(metric);
         }
         if(separate.Count>0)devices.Add(new("custom","Custom","Eigene Werte ohne Widget-Zuordnung",separate));

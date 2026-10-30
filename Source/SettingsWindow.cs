@@ -111,7 +111,7 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
         if(label=="Hardware-Symbole")System.Windows.Automation.AutomationProperties.SetAutomationId(s,"HardwareIconSize");
         if(label=="Grafikgröße (%)"){System.Windows.Automation.AutomationProperties.SetAutomationId(s,"WholeGraphicSize");s.ToolTip=SettingsText.Translate("Skaliert die ganze Grafik mit Zahl und Einheit. Bei wenig Platz wird die Größe passend begrenzt.",P.SettingsLanguage);}
         var controls=new Grid();controls.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star)});controls.ColumnDefinitions.Add(new(){Width=new GridLength(96)});controls.Children.Add(s);Grid.SetColumn(input,1);controls.Children.Add(input);
-        if(label=="Schriftgröße (%)"){controls.ColumnDefinitions.Add(new(){Width=GridLength.Auto});var resetText=ActionButton("↺",()=>{P.HardwareIconScale=P.FontScale=P.TitleTextScale=P.HardwareTextScale=P.LabelTextScale=P.ValueTextScale=P.InstrumentTextScale=P.UnitTextScale=1;sidebar.Apply();Navigate("Darstellung");});resetText.Padding=new Thickness(5,3,5,3);resetText.Margin=new Thickness(5,0,0,0);resetText.ToolTip="Schriftgröße zurücksetzen (100 %)";System.Windows.Automation.AutomationProperties.SetAutomationId(resetText,"ResetTextSize");Grid.SetColumn(resetText,2);controls.Children.Add(resetText);}
+        if(label=="Schriftgröße (%)"){controls.ColumnDefinitions.Add(new(){Width=GridLength.Auto});var resetText=ActionButton("↺",()=>{P.ResetTypography();sidebar.Apply();Navigate("Darstellung");});resetText.Padding=new Thickness(5,3,5,3);resetText.Margin=new Thickness(5,0,0,0);resetText.ToolTip=SettingsText.Translate("Text- und Hardware-Symbolgrößen auf 100 % zurücksetzen",P.SettingsLanguage);System.Windows.Automation.AutomationProperties.SetAutomationId(resetText,"ResetTextSize");Grid.SetColumn(resetText,2);controls.Children.Add(resetText);}
         bool syncing=false;s.ValueChanged+=(_,_)=>{syncing=true;input.Value=s.Value;syncing=false;change(s.Value);sidebar.Apply();};
         input.ValueChanged+=(_,args)=>{if(syncing)return;if(args.NewValue is double number&&double.IsFinite(number)){s.Value=Math.Clamp(number,min,max);}else{syncing=true;input.Value=s.Value;syncing=false;}};
         if(shown!=null&&setShown!=null){var toggle=new Wpf.Ui.Controls.ToggleSwitch{IsChecked=shown(),OnContent=SettingsText.Translate("Anzeigen",P.SettingsLanguage),OffContent=SettingsText.Translate("Anzeigen",P.SettingsLanguage),Margin=new Thickness(12,0,0,0),VerticalAlignment=VerticalAlignment.Center};System.Windows.Automation.AutomationProperties.SetAutomationId(toggle,label=="Hardware-Symbole"?"ShowHardwareIcons":"ShowText:"+label);s.IsEnabled=input.IsEnabled=shown();toggle.Click+=(_,_)=>{bool visible=toggle.IsChecked==true;setShown(visible);s.IsEnabled=input.IsEnabled=visible;sidebar.Apply();};controls.ColumnDefinitions.Add(new(){Width=new GridLength(124)});System.Windows.Automation.AutomationProperties.SetName(toggle,SettingsText.Translate(label,P.SettingsLanguage)+": "+SettingsText.Translate("Anzeigen",P.SettingsLanguage));Grid.SetColumn(toggle,controls.ColumnDefinitions.Count-1);controls.Children.Add(toggle);}
@@ -195,8 +195,8 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
                 Slider("Instrument-Zahlen",50,200,P.InstrumentTextScale*100,5,"0",v=>P.InstrumentTextScale=v/100,()=>P.ShowInstrumentNumbers,v=>P.ShowInstrumentNumbers=v);
                 Slider("Instrument-Einheiten",50,200,P.UnitTextScale*100,5,"0",v=>P.UnitTextScale=v/100,()=>P.ShowInstrumentUnits,v=>P.ShowInstrumentUnits=v);
                 });
-                var resetSizes=ActionButton("Textgrößen zurücksetzen",()=>{P.HardwareIconScale=P.FontScale=P.TitleTextScale=P.HardwareTextScale=P.LabelTextScale=P.ValueTextScale=P.InstrumentTextScale=P.UnitTextScale=1;sidebar.Apply();Navigate("Textgrößen");});System.Windows.Automation.AutomationProperties.SetAutomationId(resetSizes,"ResetIndividualTextSizes");page.Children.Add(resetSizes);
-                var showAll=ActionButton("Alle Texte anzeigen",()=>{P.ShowWidgetTitles=P.ShowHardwareNames=P.ShowLabels=P.ShowReadings=P.ShowInstrumentNumbers=P.ShowInstrumentUnits=true;sidebar.Apply();Navigate("Textgrößen");});showAll.Margin=new Thickness(0,6,0,0);System.Windows.Automation.AutomationProperties.SetAutomationId(showAll,"ShowAllSidebarText");page.Children.Add(showAll);
+                var resetSizes=ActionButton("Textgrößen zurücksetzen",()=>{P.ResetTypography();sidebar.Apply();Navigate("Textgrößen");});resetSizes.ToolTip=SettingsText.Translate("Text- und Hardware-Symbolgrößen auf 100 % zurücksetzen",P.SettingsLanguage);System.Windows.Automation.AutomationProperties.SetAutomationId(resetSizes,"ResetIndividualTextSizes");page.Children.Add(resetSizes);
+                var showAll=ActionButton("Alle Texte anzeigen",()=>{P.ShowAllTextAndIcons();sidebar.Apply();Navigate("Textgrößen");});showAll.Margin=new Thickness(0,6,0,0);showAll.ToolTip=SettingsText.Translate("Alle Texte und Hardware-Symbole anzeigen",P.SettingsLanguage);System.Windows.Automation.AutomationProperties.SetAutomationId(showAll,"ShowAllSidebarText");page.Children.Add(showAll);
                 break;
             case "Farben":
                 Heading("Text & Diagramme","Textfarben sowie Farben und Stärke der Balken und Instrumente anpassen.");
@@ -225,7 +225,7 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
                 foreach(var cpu in sidebar.Latest.Devices.Where(d=>d.Category=="CPU"))
                 {
                     var choices=new List<SensorChoice>{new("","Automatisch: CPU / Socket bevorzugen")};
-                    choices.AddRange(sidebar.Latest.Sensors.Where(s=>s.Kind=="Temperature" && (s.HardwareKind is "SuperIO" or "Motherboard" or "EmbeddedController" || s.Id.StartsWith(cpu.Id+"/",StringComparison.Ordinal))).Select(s=>new SensorChoice(s.Id,s.Device+" · "+s.Name+" · "+new Metric(s.Id,s.Name,s.Value,s.Unit).Display(P.Fahrenheit))));
+                    choices.AddRange(sidebar.Latest.Sensors.Where(s=>s.Kind=="Temperature" && (s.HardwareKind is "SuperIO" or "Motherboard" or "EmbeddedController" || s.Id.StartsWith(cpu.Id+"/",StringComparison.Ordinal))).Select(s=>new SensorChoice(s.Id,s.Device+" · "+s.Name+" · "+new Metric(s.Id,s.Name,s.Value,s.Unit){IsCpuClock=s.Kind=="Clock"&&s.HardwareKind=="Cpu"}.Display(P.Fahrenheit))));
                     P.CpuTemperatureSources.TryGetValue(cpu.Id,out string? cpuSelected);
                     Select(cpu.Name,choices,choices.FirstOrDefault(c=>c.Id==cpuSelected)??choices[0],choice=>{if(choice.Id.Length==0)P.CpuTemperatureSources.Remove(cpu.Id);else P.CpuTemperatureSources[cpu.Id]=choice.Id;});
                     Note("Aktuelle Quelle: "+cpu.Metrics.FirstOrDefault(m=>m.Id.EndsWith("/display-temperature"))?.Source);
@@ -235,6 +235,9 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
                 break;
             case "Karten":
                 Heading("Karten & Reihenfolge", "Häkchen schalten Karten ein oder aus. Mit den Pfeilen änderst du ihre Reihenfolge.");
+                var combined=Check("Alle Werte in einer Kachel (HW Sensors)",P.CombineSensorCards,v=>P.CombineSensorCards=v);
+                System.Windows.Automation.AutomationProperties.SetAutomationId(combined,"CombineSensorCards");
+                Note("Die Hardwarebereiche behalten ihr Originaldesign mit eigenen Instrumenten und Verläufen. Nur der äußere Rahmen wird zu HW Sensors zusammengefasst.");
                 foreach(var category in P.Order.ToArray())
                 {
                     var row = new DockPanel { Margin = new Thickness(0,4,0,4) };
@@ -272,6 +275,7 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
                 System.Windows.Automation.AutomationProperties.SetAutomationId(sourceChoice,"SensorSource");
                 Note("Beide Optionen sind eingebaut. Der Wechsel erfolgt im Hintergrund. Kein separates Programm erforderlich.");
                 Note("Open Hardware Monitor + PawnIO: GPU und SMART über Open Hardware Monitor, CPU und Mainboard über die LibreHardwareMonitor/PawnIO-Brücke. Nicht unterstützte Geräte verwenden Libre als Ersatz.");
+                Note("Die Libre-Option ergänzt nicht erkannte Laufwerke automatisch mit dem zweiten eingebauten Leser.");
                 Note("Ohne WinRing0 und InpOut. Beide Optionen benötigen PawnIO für erweiterte CPU- und Mainboard-Werte.");
                 Note("Beim ersten Wechsel werden passende Geräte und Werte mit deiner bisherigen Auswahl übernommen. Danach bleiben Änderungen je Quelle erhalten. RAM und Netzwerk verwenden Windows.");
                 sourceStatus.TextWrapping=TextWrapping.Wrap;sourceStatus.Margin=new Thickness(0,0,0,12);page.Children.Add(sourceStatus);Refresh(sidebar.Latest);
@@ -491,7 +495,7 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
         if(current == "System")
         {
             bool admin = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
-            diagnostics.Text = $"Sidebar by NemeSIS {typeof(App).Assembly.GetName().Version?.ToString(3)} · .NET {Environment.Version}\nSensorquelle: {SensorSources.Name(P.SensorSource)}\nGestartete EXE: {Environment.ProcessPath}\nZugriff: {(admin ? "Administrator" : "Standardbenutzer")}\n"+ScheduledAutostart.Describe()+"\n"+
+            diagnostics.Text = $"Sidebar by NemeSIS {typeof(App).Assembly.GetName().Version?.ToString()} · .NET {Environment.Version}\nSensorquelle: {SensorSources.Name(P.SensorSource)}\nGestartete EXE: {Environment.ProcessPath}\nZugriff: {(admin ? "Administrator" : "Standardbenutzer")}\n"+ScheduledAutostart.Describe()+"\n"+
                 (snapshot == null ? "Sensoren werden initialisiert …" : $"{snapshot.Devices.Count} Geräte · {snapshot.Sensors.Count} Messwerte · {snapshot.Time:HH:mm:ss}\n"+string.Join("\n",snapshot.Warnings));
             SettingsText.Apply(this,P.SettingsLanguage);
         }
@@ -505,7 +509,7 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
         if(current=="Eigene Werte")sources=P.Pins.Distinct().Select(id=>sources.FirstOrDefault(s=>s.Id==id)??new SensorRow(id,"Nicht verfügbar",id,"",null,"" )).ToList();
         var items = sources.Where(s=>query.Length==0 || (s.Device+" "+s.Name+" "+s.Kind).Contains(query,StringComparison.OrdinalIgnoreCase))
             .OrderBy(s=>s.Device).ThenBy(s=>s.Name)
-            .Select(s=>new SensorDisplay(s.Id,s.Device,s.Name,s.Kind,new Metric(s.Id,s.Name,s.Value,s.Unit).Display(P.Fahrenheit),P.Pins.Contains(s.Id),ChangePin,sidebar.Latest!=null&&PinPlacement.Target(sidebar.Latest,P,s.Id) is Device device?device.Category+" · "+device.Name:"Separate Karte")).ToList();
+            .Select(s=>new SensorDisplay(s.Id,s.Device,s.Name,s.Kind,new Metric(s.Id,s.Name,s.Value,s.Unit){IsCpuClock=s.Kind=="Clock"&&s.HardwareKind=="Cpu"}.Display(P.Fahrenheit),P.Pins.Contains(s.Id),ChangePin,sidebar.Latest!=null&&PinPlacement.Target(sidebar.Latest,P,s.Id) is Device device?device.Category+" · "+device.Name:"Separate Karte")).ToList();
         if (sensorList.ItemsSource is List<SensorDisplay> existing && existing.Select(s=>s.Id+"/"+s.Name).SequenceEqual(items.Select(s=>s.Id+"/"+s.Name)))
         {
             for(int i=0;i<existing.Count;i++){existing[i].Display=items[i].Display;existing[i].Widget=items[i].Widget;existing[i].SyncPinned(items[i].Pinned);}

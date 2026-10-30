@@ -29,6 +29,11 @@ The host never substitutes Libre values while claiming they were read by upstrea
 
 This is not a complete native port of every upstream OHM backend to PawnIO. Hardware coverage depends on the selected readers, installed vendor drivers and permissions. Missing readings stay unavailable.
 
+## Additional local changes on 2026-10-30
+
+- Added an optional storage-only mode to DriverlessComputer. The Libre option uses it to supplement physical drives absent from Libre, with explicitly labelled OHM fallback providers. It opens no GPU groups in this mode.
+- The hybrid merge now supplements missing sensor values and extra sensors from the matching Libre device while retaining available OHM readings. Added sensors have stable IDs under the original device and preference aliases.
+
 ## License and source
 
 Original source files retain their upstream notices. Open Hardware Monitor and the modifications are distributed under MPL-2.0; see `LICENSE.txt`. Corresponding modified source is included in the Sidebar source archive in this folder. Generated `bin/` and `obj/` files are excluded.

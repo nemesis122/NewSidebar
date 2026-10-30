@@ -32,14 +32,15 @@ public sealed class DriverlessComputer : IComputer,IDisposable
     private readonly List<IGroup> groups=new();
     private readonly List<string> diagnostics=new();
     private bool opened;
+    private readonly bool storageOnly;
+    public DriverlessComputer(bool storageOnly=false)=>this.storageOnly=storageOnly;
     public IList<IHardware> Hardware=>groups.SelectMany(g=>g.Hardware).ToArray();
     public IReadOnlyList<string> Diagnostics=>diagnostics;
     public void Open()
     {
         if(opened)return;
         var settings=new MemorySettings();
-        Add("NVIDIA",()=>new NvidiaGroup(settings));
-        Add("AMD",()=>new AmdGpuGroup(settings));
+        if(!storageOnly){Add("NVIDIA",()=>new NvidiaGroup(settings));Add("AMD",()=>new AmdGpuGroup(settings));}
         Add("SMART",()=>new StorageGroup(settings));
         opened=true;
     }

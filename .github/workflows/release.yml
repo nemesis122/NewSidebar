@@ -1,0 +1,89 @@
+name: Build and publish release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - Source/SidebarByNemeSIS.csproj
+      - .github/workflows/release.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Read version
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content Source/SidebarByNemeSIS.csproj
+          $version = [string]$project.Project.PropertyGroup.Version
+          if ($version -notmatch '^\d+\.\d+\.\d+\.\d+$') { throw 'Expected four-part release version' }
+          "RELEASE_VERSION=$version" >> $env:GITHUB_ENV
+      - name: Data and configuration tests
+        shell: pwsh
+        run: |
+          dotnet run --project Tests/Checks.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Data tests failed' }
+      - name: Sensor mapping tests
+        shell: pwsh
+        run: |
+          dotnet run --project SensorTests/SensorChecks.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Sensor tests failed' }
+      - name: Native UI and lifecycle tests
+        shell: pwsh
+        run: |
+          dotnet run --project UITests/LayoutQA.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Native UI tests failed' }
+      - name: Publish portable executable
+        shell: pwsh
+        run: ./Build-Portable.ps1
+      - name: Package and verify
+        shell: pwsh
+        run: |
+          $version = $env:RELEASE_VERSION
+          $bundle = "release/Sidebar-v$version"
+          New-Item -ItemType Directory -Path $bundle -Force | Out-Null
+          Copy-Item publish/SidebarByNemeSIS.exe "$bundle/Sidebar-by-NemeSIS-v$version.exe"
+          Copy-Item Licenses $bundle -Recurse
+          Copy-Item OpenHardwareMonitor.Driverless/LICENSE.txt "$bundle/Licenses/OpenHardwareMonitor-MPL-2.0.txt"
+          Copy-Item OpenHardwareMonitor.Driverless/README.md "$bundle/Licenses/OpenHardwareMonitor-MODIFICATIONS.md"
+          Copy-Item THIRD-PARTY-NOTICES.txt,HW-SENSORS.md,APP-PRUEFBERICHT.txt $bundle
+          $report = Join-Path $env:RUNNER_TEMP 'portable-verification.json'
+          $exe = Join-Path (Get-Location) "$bundle/Sidebar-by-NemeSIS-v$version.exe"
+          $process = Start-Process -FilePath $exe -ArgumentList '--verify-portable',('"'+$report+'"') -WindowStyle Hidden -PassThru -Wait
+          if ($process.ExitCode -ne 0) { throw 'Portable startup failed' }
+          $result = Get-Content $report -Raw | ConvertFrom-Json
+          if ($result.Version -ne $version) { throw 'Portable version mismatch' }
+          Get-Content UITests/LayoutQA-result.txt | Set-Content "$bundle/VALIDATION.txt"
+          "Data tests and sensor mapping tests passed in this workflow. Version $version; runtime $($result.Runtime)." | Add-Content "$bundle/VALIDATION.txt"
+          Compress-Archive -Path "$bundle/*" -DestinationPath "release/Sidebar-v$version-Portable.zip"
+          git archive --format=zip --output="release/Sidebar-v$version-Source.zip" HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Source archive failed' }
+          Copy-Item $exe release/
+          Copy-Item ReleaseNotes-v2.21.2.4.md release/
+          Get-ChildItem release -File | ForEach-Object { "{0}  {1}" -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(),$_.Name } | Set-Content release/SHA256SUMS.txt
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = $env:RELEASE_VERSION
+          $files = @(Get-ChildItem release -File | ForEach-Object FullName)
+          gh release create "v$version" @files --repo "$env:GITHUB_REPOSITORY" --target "$env:GITHUB_SHA" --title "Sidebar by NemeSIS v$version - HW Sensors and hardware fixes" --notes-file ReleaseNotes-v2.21.2.4.md --draft
+          if ($LASTEXITCODE -ne 0) { throw 'Release upload failed' }
+          gh release edit "v$version" --repo "$env:GITHUB_REPOSITORY" --draft=false --latest
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }

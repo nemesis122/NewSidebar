@@ -1,6 +1,10 @@
-# Sidebar by NemeSIS v2.21.1
+# Sidebar by NemeSIS v2.21.2
 
 A portable Windows hardware sidebar with **69 layouts**, **14 color themes**, native **WPF UI 4.3.0 settings** and selectable embedded sensor sources. This release includes the designs and text-visibility controls developed since v2.18.0.
+
+## New: hardware icon size and visibility
+
+**Settings → Text sizes → Hardware icons** now has the same **50–200% slider, numeric input and Show switch** as Widget titles. Resize or hide hardware header icons independently of text. Hidden icons reserve no width or trailing margin; their saved size is retained. Reset text sizes restores icon size to 100%. Existing settings keep icons enabled at 100%; layouts without header icons retain their appearance. Settings-navigation icons, top buttons and the notification-area icon are unaffected.
 
 ## Sensor sources without WinRing0
 
@@ -50,11 +54,11 @@ The flat Fluent settings menu retains synchronized sliders and numeric fields, s
 
 ## Download and upgrade
 
-[Download Sidebar-by-NemeSIS-v2.21.1.exe](https://github.com/nemesis122/NewSidebar/releases/download/v2.21.1/Sidebar-by-NemeSIS-v2.21.1.exe). **Windows 10/11 x64; .NET 8.0.32 is bundled.** No application installer or separate .NET installation is required.
+[Download Sidebar-by-NemeSIS-v2.21.2.exe](https://github.com/nemesis122/NewSidebar/releases/download/v2.21.2/Sidebar-by-NemeSIS-v2.21.2.exe). **Windows 10/11 x64; .NET 8.0.32 is bundled.** No application installer or separate .NET installation is required. **The EXE is unsigned**; Windows reputation warnings can still appear.
 
 1. Exit the previous copy through its notification-area icon.
 2. Put the new EXE in your chosen writable folder. Keep **aurora-settings.json** beside it to retain your settings; different folders have separate settings.
-3. Start the new EXE and verify **2.21.1.0** and the launched path under **System information**.
+3. Start the new EXE and verify **2.21.2.0** and the launched path under **System information**.
 
 Some CPU/mainboard readings require **PawnIO and administrator access**, configured under **Setup**. Moving an existing startup task to a new EXE may require one Windows approval; startup on/off and delay are retained. No startup task is created automatically on a fresh PC. Available readings depend on hardware, firmware, vendor drivers and account permissions.
 
@@ -62,19 +66,21 @@ Some CPU/mainboard readings require **PawnIO and administrator access**, configu
 
 All layout previews use **demo hardware and simulated readings**, rendered with the production layouts. Click a thumbnail for full size.
 
-[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.21.1/New-Designs.png" width="960" alt="Six additional modern designs with demo hardware">](https://github.com/nemesis122/NewSidebar/releases/download/v2.21.1/New-Designs.png)
+[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.21.2/New-Designs.png" width="960" alt="Six additional modern designs with demo hardware">](https://github.com/nemesis122/NewSidebar/releases/download/v2.21.2/New-Designs.png)
 
-| Dashboard Pro — two columns | Text sizes and Show switches |
+| Dashboard Pro — two columns | Hardware icons and text sizes |
 | --- | --- |
-| [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.21.1/DashboardPro-2Columns.png" width="300" alt="Dashboard Pro with demo readings in two columns">](https://github.com/nemesis122/NewSidebar/releases/download/v2.21.1/DashboardPro-2Columns.png) | [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.21.1/Settings-TextVisibility.png" width="620" alt="English text sizes with independent Show switches">](https://github.com/nemesis122/NewSidebar/releases/download/v2.21.1/Settings-TextVisibility.png) |
+| [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.21.2/DashboardPro-2Columns.png" width="300" alt="Dashboard Pro with demo readings in two columns">](https://github.com/nemesis122/NewSidebar/releases/download/v2.21.2/DashboardPro-2Columns.png) | [<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.21.2/Settings-HardwareIcons.png" width="620" alt="Hardware icon size slider and independent Show switches">](https://github.com/nemesis122/NewSidebar/releases/download/v2.21.2/Settings-HardwareIcons.png) |
 
-[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.21.1/Settings-SensorSource.png" width="960" alt="English sensor setup showing the explicitly labelled Open Hardware Monitor and PawnIO bridge">](https://github.com/nemesis122/NewSidebar/releases/download/v2.21.1/Settings-SensorSource.png)
+[<img src="https://github.com/nemesis122/NewSidebar/releases/download/v2.21.2/Settings-SensorSource.png" width="960" alt="English sensor setup showing the explicitly labelled Open Hardware Monitor and PawnIO bridge">](https://github.com/nemesis122/NewSidebar/releases/download/v2.21.2/Settings-SensorSource.png)
 
 ## Validation and source
 
-**83,502 native UI checks**, **3,864 layout/color/width render combinations**, **123 data/configuration checks** and **31 sensor/driver-safety checks** passed. The new regression checks compare actual fit scales for Original, Fluent Glass and Minimal Pro. Driver-resource/type/import checks run before optional hardware tests. Earlier available-hardware smoke testing switched Libre → hybrid → Libre; the hybrid read one device directly and five via the bridge on the test account. This preference-only correction did not require repeating the hardware test. Software checks do not establish compatibility with every physical PC.
+**84,128 native UI checks**, **3,864 layout/color/width render combinations**, **128 data/configuration checks** and **31 sensor/driver-safety fixture checks** passed. Icon sizes are checked at 50% and 200% across all layouts, including repeated application without cumulative scaling. Existing regression checks cover source-selection fit behavior, settings controls and portable identity.
 
-The portable EXE independently reports **2.21.1.0**, LibreHardwareMonitor **0.9.6.0**, the modified OHM assembly **1.0.9513.1** and **zero OHM embedded resources**. The repository tag and **Sidebar-by-NemeSIS-v2.21.1-source.zip** contain matching source, tests, build script, dependency notices and modified MPL-2.0 source.
+A real Libre → OHM/PawnIO → Libre switch passed on the test PC: 6 devices, 145/144/145 sensors and 9 available temperature readings per capture, with no backend warnings. The hybrid read one device directly and five via the bridge. Two relocated/renamed EXEs correctly report their own executable and adjacent configuration paths. The source archive is byte-checked against all 155 project files. These checks do not establish compatibility with every physical PC; no fresh-machine, reboot or long-duration test was performed for this build.
+
+The portable EXE independently reports **2.21.2.0**, LibreHardwareMonitor **0.9.6.0**, the modified OHM assembly **1.0.9513.1** and **zero OHM embedded resources**. The repository tag and **Sidebar-by-NemeSIS-v2.21.2-source.zip** contain matching source, tests, build script, dependency notices and modified MPL-2.0 source.
 
 Build on Windows with the .NET 8 SDK:
 

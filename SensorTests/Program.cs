@@ -2,8 +2,11 @@ using Aurora;
 using LibreHardwareMonitor.Hardware;
 using System.Reflection;
 using System.Runtime.InteropServices;
+if(OperatingSystem.IsWindows())SensorCheckProcessSafety.SetErrorMode(3);
 int passed=0;
 void Check(bool value,string name){if(!value)throw new Exception(name);Console.WriteLine("PASS "+name);passed++;}
+HardwareMappingChecks.Run(Check);
+int replay=Array.IndexOf(args,"--replay");if(replay>=0&&replay+1<args.Length)RealHardwareReplayChecks.Run(args[replay+1],Check);
 
 // These checks execute before any optional hardware test.
 var assembly=typeof(OpenHardwareMonitor.Hardware.DriverlessComputer).Assembly;
@@ -60,6 +63,23 @@ using(var session=new SensorBackendSession(source=>new FakeBackend(source,new())
     Check(ohm.Devices.Single(d=>d.Category=="CPU").Metrics.First(m=>m.Id.EndsWith("display-temperature")).Value==50,"Bridge temperatures use the same CPU selection logic");
 }
 
+foreach(string name in new[]{"CPU Core #1","CPU Core","P-Core #1","E-Core #1"})
+using(var session=new SensorBackendSession(source=>new FakeBackend(source,new()){ClockName=name}))
+{
+    var service=new SensorService(session);
+    foreach(string source in new[]{SensorSources.Libre,SensorSources.OpenPawn})
+    {
+        service.Source=source;var snapshot=service.Read();
+        var clock=snapshot.Devices.Single(d=>d.Category=="CPU").Metrics.Single(m=>m.Id.EndsWith("/clocks-average"));
+        Check(clock.Value==4000&&clock.Source!.Contains(name)&&clock.IsCpuClock&&clock.Display(false)=="4.00 GHz","CPU clock maps Intel core naming and two-decimal presentation through the selected source: "+source+" / "+name);
+    }
+}
+using(var session=new SensorBackendSession(source=>new FakeBackend(source,new()){ClockName="Bus Speed"}))
+{
+    var clock=new SensorService(session).Read().Devices.Single(d=>d.Category=="CPU").Metrics.Single(m=>m.Id.EndsWith("/clocks-average"));
+    Check(clock.Value==null&&clock.Source!.Contains("unavailable"),"A backend with only a bus clock cannot display it as a CPU core clock");
+}
+
 var seedPrefs=new Preferences{FontScale=1.4,ValueTextScale=1.2,HiddenDevices=new(){"/board/0"},HiddenMetrics=new(){"/gpu/0|/gpu/0/temp"},HardwareNames=new(){{"/gpu/0","Custom GPU"}}};
 var seeds=new List<DevicePreferenceSeed>{new("ohm/pawn/board/0","/board/0",new()),new("ohm/direct/gpu/0","/gpu/0",new(){{"ohm/direct/gpu/0/temp","/gpu/0/temp"}})};
 var seededSnapshot=new Snapshot(new(),new(),new(),DateTime.Now,SensorSources.OpenPawn,seeds);
@@ -89,8 +109,14 @@ Console.WriteLine($"{passed} sensor checks passed");
 sealed class FakeBackend(string source,List<string> log):ISensorBackend
 {
     public bool FailOpen,FailClose;
+    public string ClockName="Core #1";
     string Id(string id)=>source==SensorSources.OpenPawn?SensorSources.BridgeId(id):id;
     public void Open(){log.Add("open "+source);if(FailOpen)throw new InvalidOperationException("Open failed");}
     public void Dispose(){log.Add("close "+source);if(FailClose){FailClose=false;throw new InvalidOperationException("Close failed");}}
-    public HardwareSample[] Capture(List<string> warnings)=>new[]{new HardwareSample(Id("/cpu/0"),"Fixture CPU","Cpu",new[]{new SensorSample(Id("/cpu/0/temp/0"),"CPU Package",SensorType.Temperature,70),new SensorSample(Id("/cpu/0/load/0"),"CPU Total",SensorType.Load,31.7),new SensorSample(Id("/cpu/0/clock/0"),"Core #1",SensorType.Clock,4000)},"Fixture"),new HardwareSample(Id("/board/0"),"Fixture board","SuperIO",new[]{new SensorSample(Id("/board/0/temp/0"),"CPU",SensorType.Temperature,50)},"Fixture")};
+    public HardwareSample[] Capture(List<string> warnings)=>new[]{new HardwareSample(Id("/cpu/0"),"Fixture CPU","Cpu",new[]{new SensorSample(Id("/cpu/0/temp/0"),"CPU Package",SensorType.Temperature,70),new SensorSample(Id("/cpu/0/load/0"),"CPU Total",SensorType.Load,31.7),new SensorSample(Id("/cpu/0/clock/0"),ClockName,SensorType.Clock,4000)},"Fixture"),new HardwareSample(Id("/board/0"),"Fixture board","SuperIO",new[]{new SensorSample(Id("/board/0/temp/0"),"CPU",SensorType.Temperature,50)},"Fixture")};
+}
+
+static class SensorCheckProcessSafety
+{
+    [DllImport("kernel32.dll")]public static extern uint SetErrorMode(uint mode);
 }

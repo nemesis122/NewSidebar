@@ -9,6 +9,7 @@ public enum SidebarTextRole { None,WidgetTitles,HardwareNames,Labels,Readings,In
 
 public sealed class Preferences
 {
+    public bool CombineSensorCards { get; set; }
     public string SensorSource {get;set;}=SensorSources.Libre;
     public List<string> SeededSourceDevices {get;set;}=new();
     public Dictionary<string,string> HardwareNames { get; set; } = new();
@@ -39,6 +40,14 @@ public sealed class Preferences
     public double ValueTextScale { get; set; } = 1;
     public double InstrumentTextScale { get; set; } = 1;
     public double UnitTextScale { get; set; } = 1;
+    public void ResetTypography()
+    {
+        HardwareIconScale=FontScale=TitleTextScale=HardwareTextScale=LabelTextScale=ValueTextScale=InstrumentTextScale=UnitTextScale=1;
+    }
+    public void ShowAllTextAndIcons()
+    {
+        ShowHardwareIcons=ShowWidgetTitles=ShowHardwareNames=ShowLabels=ShowReadings=ShowInstrumentNumbers=ShowInstrumentUnits=true;
+    }
     public double InstrumentScale { get; set; } = 1;
     public static double TextFactor(double value)=>double.IsFinite(value)?Math.Clamp(value,.5,2):1;
     public bool Topmost { get; set; } = false;
@@ -127,6 +136,7 @@ public record NetworkAddressState(string? InternalIP=null,string? ExternalIP=nul
 
 public record Metric(string Id, string Label, double? Value, string Unit, double Maximum = 100,string? Source=null,string? TextValue=null)
 {
+    public bool IsCpuClock { get; init; }
     public static string FormatNumber(double value)=>Math.Abs(value)>=1?Math.Truncate(value).ToString("0"):value.ToString("0.##");
     public string Display(bool fahrenheit)
     {
@@ -134,6 +144,7 @@ public record Metric(string Id, string Label, double? Value, string Unit, double
         if (!Value.HasValue || !double.IsFinite(Value.Value)) return "—";
         double v = Value.Value;
         string u = Unit;
+        if(IsCpuClock && u=="MHz")return (v/1000).ToString("0.00",System.Globalization.CultureInfo.InvariantCulture)+" GHz";
         if (u == "°C" && fahrenheit) { v = v * 1.8 + 32; u = "°F"; }
         if(u=="MB/s")return Math.Floor(Math.Max(0,v)).ToString("0")+" MB/s";
         if (u == "B/s")

@@ -1,0 +1,29 @@
+Sidebar by NemeSIS 2.21.2.4 - validation report
+
+PASSED
+92,654 native UI checks; 3,864 layout/color/width render combinations.
+181 data/configuration checks.
+124 hardware sensor checks.
+185 sensor checks with optional recorded-hardware replay, including the 124 base checks.
+18 application lifecycle checks are included in the native UI total.
+
+COVERAGE
+All 69 layouts, themes, widths, columns, optional shared HW Sensors frame, live updates, missing values, history gaps, Fahrenheit, warning frames, visibility, hardware icons, typography and reset actions.
+Settings pages and languages, device/reading selection, sensor pins and target widgets, hardware names, colors, order, source switching, scrolling, fit-to-view and manual IP refresh with controlled responses, timeout and cancellation.
+Actual test-window start, repeated start protection, tray hide and restore, reopening settings, removed-monitor fallback, warning controls, empty selection and ordered backend shutdown.
+Portable executable startup, embedded runtime and version identity.
+Administrator hardware recordings cover both embedded sources. Storage composition fixes replayed against all 15 recorded source pairs and separate synthetic fixtures.
+
+FIXES
+Supplement otherwise undetected drives in Libre mode through an identified OHM storage fallback. Preserve existing Libre drive IDs and values; match repeated models individually.
+Retain valid OHM readings while supplementing missing values and extra sensors from Libre. Preserve stable device ownership and preference aliases.
+Use a valid alternative GPU clock when the preferred clock is unavailable. Explicitly select Intel D3D-3D load, use detected VRAM capacity, and supply physical units for duration, timing, noise and conductivity.
+Recognize CPU core clock names, show two decimal GHz precision, restore hardware icons with Show all text, and preserve visibility on size resets.
+Prevent duplicate workers and remove old cards when the visible selection becomes empty.
+
+LIMITS
+Recorded privileged readings and fixture/replay tests do not establish support for every physical PC. New storage composition was validated against recorded real inputs; no new administrator capture of the final executable was performed.
+AMD/NVIDIA variants were checked with fixtures, not physical devices in this session.
+No driver installation, Windows logoff/logon, reboot or physical monitor replacement was performed. Autostart definitions were tested separately without changing the installed task.
+No stress test, hardware health certification or universal error-free guarantee.
+No user configuration, raw hardware recordings, adapter identifiers or local filesystem paths are included in this public release.

@@ -15,7 +15,7 @@ public sealed class SensorBackendSession : IDisposable
     private readonly Func<string,ISensorBackend> create;
     private ISensorBackend? backend;
     public string ActiveSource {get;private set;}="";
-    public SensorBackendSession(Func<string,ISensorBackend>? factory=null)=>create=factory??(source=>source==SensorSources.OpenPawn?new OpenPawnIoSensorBackend():new LibreSensorBackend());
+    public SensorBackendSession(Func<string,ISensorBackend>? factory=null)=>create=factory??(source=>source==SensorSources.OpenPawn?new OpenPawnIoSensorBackend():new LibreSensorBackend(withStorageFallback:true));
     public void Select(string source)
     {
         source=SensorSources.Normalize(source);
@@ -32,8 +32,11 @@ public sealed class SensorBackendSession : IDisposable
 internal sealed class LibreSensorBackend : ISensorBackend
 {
     private readonly Computer computer=new(){IsCpuEnabled=true,IsGpuEnabled=true,IsMemoryEnabled=true,IsMotherboardEnabled=true,IsStorageEnabled=true,IsNetworkEnabled=false,IsControllerEnabled=true};
-    public void Open()=>computer.Open();
-    public void Dispose()=>computer.Close();
+    private readonly OHM.DriverlessComputer? storageFallback;
+    private string? storageError;
+    public LibreSensorBackend(bool withStorageFallback=false){if(withStorageFallback)storageFallback=new(storageOnly:true);}
+    public void Open(){computer.Open();if(storageFallback!=null)try{storageFallback.Open();}catch(Exception e){storageError=e.Message;}}
+    public void Dispose(){try{storageFallback?.Dispose();}finally{computer.Close();}}
     private static IEnumerable<IHardware> Flatten(IHardware hw){yield return hw;foreach(var sub in hw.SubHardware)foreach(var item in Flatten(sub))yield return item;}
     public HardwareSample[] Capture(List<string> warnings)
     {
@@ -43,7 +46,21 @@ internal sealed class LibreSensorBackend : ISensorBackend
             try{hw.Update();result.Add(new(hw.Identifier.ToString(),hw.Name,hw.HardwareType.ToString(),hw.Sensors.Select(s=>new SensorSample(s.Identifier.ToString(),s.Name,s.SensorType,SensorSources.Finite(s.Value))).ToArray(),"LibreHardwareMonitor/PawnIO"));}
             catch(Exception error){warnings.Add(hw.Name+": "+error.Message);}
         }
-        return result.ToArray();
+        if(storageFallback==null)return result.ToArray();
+        var alternative=new List<HardwareSample>();
+        if(storageError!=null)warnings.Add("Laufwerk-Fallback: "+storageError);
+        warnings.AddRange(storageFallback.Diagnostics.Select(s=>"Laufwerk-Fallback: "+s));
+        foreach(var hw in storageFallback.Hardware)
+        {
+            try
+            {
+                hw.Update();
+                var sensors=hw.Sensors.Where(s=>Enum.TryParse<SensorType>(s.SensorType.ToString(),out _)).Select(s=>new SensorSample(s.Identifier.ToString(),s.Name,Enum.Parse<SensorType>(s.SensorType.ToString()),SensorSources.Finite(s.Value))).ToArray();
+                alternative.Add(new(hw.Identifier.ToString(),hw.Name,"Storage",sensors,"Open Hardware Monitor storage fallback"));
+            }
+            catch(Exception e){warnings.Add("Laufwerk-Fallback · "+hw.Name+": "+e.Message);}
+        }
+        return SensorBackendMerge.AddMissingStorage(result,alternative);
     }
 }
 
@@ -86,10 +103,24 @@ internal sealed class OpenPawnIoSensorBackend : ISensorBackend
 
 public static class SensorBackendMerge
 {
+    public static HardwareSample[] AddMissingStorage(IEnumerable<HardwareSample> primary,IEnumerable<HardwareSample> alternative)
+    {
+        var result=primary.ToList();var unmatched=result.Where(h=>h.HardwareType=="Storage").ToList();
+        static string Key(string name)=>new(name.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
+        foreach(var hw in alternative.Where(h=>h.HardwareType=="Storage"&&h.Sensors.Any(s=>s.Value.HasValue)))
+        {
+            var match=unmatched.FirstOrDefault(h=>Key(h.Name)==Key(hw.Name));
+            if(match!=null){unmatched.Remove(match);continue;}
+            string Id(string id)=>"ohm/fallback"+(id.StartsWith('/')?id:"/"+id);
+            result.Add(hw with{Identifier=Id(hw.Identifier),Sensors=hw.Sensors.Select(s=>s with{Identifier=Id(s.Identifier)}).ToArray()});
+        }
+        return result.ToArray();
+    }
     // Match repeated identical models one at a time; don't drop unmatched disks or a second GPU.
     public static HardwareSample[] Combine(IEnumerable<HardwareSample> direct,IEnumerable<HardwareSample> bridge)
     {
-        var result=direct.Where(h=>h.Sensors.Any(s=>s.Value.HasValue)).ToList();
+        var result=direct.Where(h=>h.Sensors.Any(s=>s.Value.HasValue)).Select(h=>h.HardwareType=="Storage"&&h.Identifier.StartsWith("ohm/direct/",StringComparison.Ordinal)
+            ? h with{PreferenceDeviceId="ohm/fallback"+h.Identifier["ohm/direct".Length..],PreferenceSensorIds=h.Sensors.Where(s=>s.Identifier.StartsWith("ohm/direct/",StringComparison.Ordinal)).ToDictionary(s=>s.Identifier,s=>"ohm/fallback"+s.Identifier["ohm/direct".Length..])}:h).ToList();
         var unmatched=new List<HardwareSample>(result);
         var fallback=bridge.ToArray();
         static string Key(string text)=>new(text.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
@@ -102,13 +133,27 @@ public static class SensorBackendMerge
             if(match!=null)
             {
                 var aliases=new Dictionary<string,string>();
+                var sensors=match.Sensors.ToList();bool supplemented=false;
                 foreach(var sensor in match.Sensors)
                 {
                     var reference=hw.Sensors.FirstOrDefault(s=>s.SensorType==sensor.SensorType&&s.Name.Equals(sensor.Name,StringComparison.OrdinalIgnoreCase));
                     if(reference!=null)aliases[sensor.Identifier]=reference.Identifier;
                 }
+                foreach(var reference in hw.Sensors)
+                {
+                    int sensorIndex=sensors.FindIndex(s=>s.SensorType==reference.SensorType&&s.Name.Equals(reference.Name,StringComparison.OrdinalIgnoreCase));
+                    if(sensorIndex>=0)
+                    {
+                        if(!sensors[sensorIndex].Value.HasValue&&reference.Value.HasValue){sensors[sensorIndex]=sensors[sensorIndex] with{Value=reference.Value};supplemented=true;}
+                    }
+                    else
+                    {
+                        string identifier=match.Identifier+"/bridge"+(reference.Identifier.StartsWith('/')?reference.Identifier:"/"+reference.Identifier);
+                        sensors.Add(reference with{Identifier=identifier});aliases[identifier]=reference.Identifier;supplemented=true;
+                    }
+                }
                 int index=result.IndexOf(match);
-                result[index]=match with{PreferenceDeviceId=hw.Identifier,PreferenceSensorIds=aliases};
+                result[index]=match with{Sensors=sensors.ToArray(),Provider=match.Provider+(supplemented?" + LibreHardwareMonitor fallback":""),PreferenceDeviceId=hw.Identifier,PreferenceSensorIds=aliases};
                 unmatched.Remove(match);continue;
             }
             result.Add(hw with{Identifier=SensorSources.BridgeId(hw.Identifier),Sensors=hw.Sensors.Select(s=>s with{Identifier=SensorSources.BridgeId(s.Identifier)}).ToArray(),Provider=directKind?"LibreHardwareMonitor fallback":"LibreHardwareMonitor/PawnIO bridge",PreferenceDeviceId=hw.Identifier,PreferenceSensorIds=hw.Sensors.ToDictionary(s=>SensorSources.BridgeId(s.Identifier),s=>s.Identifier)});

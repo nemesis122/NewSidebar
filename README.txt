@@ -1,8 +1,19 @@
-Sidebar by NemeSIS v2.21.2
+Sidebar by NemeSIS v2.21.2.4
 
 A portable Windows hardware sidebar with **69 layouts**, **14 color themes**, native **WPF UI 4.3.0 settings** and selectable embedded sensor sources. This release includes the designs and text-visibility controls developed since v2.18.0.
 
-## New: hardware icon size and visibility
+## New in v2.21.2.4
+
+- Optional **HW Sensors** tile: all selected hardware sections share one outer frame while retaining their original design, instruments and histories in all 69 layouts. Enable it under **Cards & order**.
+- CPU clock detection recognizes Intel, AMD and hybrid-core sensor names. CPU frequencies use two decimals, for example **4.11 GHz**; unavailable readings remain unavailable.
+- **Show all text** also restores hardware icons. Size resets retain visibility choices. New vector settings and minimize-to-tray buttons.
+- Missing storage devices can be supplemented by the built-in OHM storage reader in Libre mode. OHM mode retains available direct readings and supplements missing values and extra sensors from Libre.
+- Valid alternative GPU clocks, explicit Intel D3D-3D load selection, detected VRAM capacity and additional physical sensor units.
+- One sensor worker across repeated start requests; correct empty-selection rendering; verified tray restore and shutdown.
+
+See [HW-SENSORS.md](HW-SENSORS.md) for the shared-frame behavior and [APP-PRUEFBERICHT.txt](APP-PRUEFBERICHT.txt) for validation scope.
+
+## Hardware icon size and visibility
 
 **Settings → Text sizes → Hardware icons** now has the same **50–200% slider, numeric input and Show switch** as Widget titles. Resize or hide hardware header icons independently of text. Hidden icons reserve no width or trailing margin; their saved size is retained. Reset text sizes restores icon size to 100%. Existing settings keep icons enabled at 100%; layouts without header icons retain their appearance. Settings-navigation icons, top buttons and the notification-area icon are unaffected.
 
@@ -10,7 +21,7 @@ A portable Windows hardware sidebar with **69 layouts**, **14 color themes**, na
 
 Choose **Settings → Setup → Sensor detection**:
 
-- **LibreHardwareMonitor + PawnIO** — the existing default sensor engine.
+- **LibreHardwareMonitor + PawnIO** — the default sensor engine, with an identified OHM storage fallback for otherwise undetected drives.
 - **Open Hardware Monitor + PawnIO** — a modified, driverless OHM subset reads supported GPU/vendor-API and Windows SMART sensors. CPU, motherboard and controller readings use the existing **LibreHardwareMonitor/PawnIO bridge**. Unsupported GPU/storage devices use an identified Libre fallback.
 
 The OHM option is an explicitly labelled **hybrid integration**, not a complete native upstream OHM-to-PawnIO port. Neither option needs a separate monitoring application. The modified OHM reader contains no WinRing0/InpOut driver payloads, extraction code, raw-access classes or driver-installation imports. CPU/mainboard access continues through the existing PawnIO setup flow; no driver is installed automatically.
@@ -54,11 +65,11 @@ The flat Fluent settings menu retains synchronized sliders and numeric fields, s
 
 ## Download and upgrade
 
-[Download Sidebar-by-NemeSIS-v2.21.2.exe](https://github.com/nemesis122/NewSidebar/releases/download/v2.21.2/Sidebar-by-NemeSIS-v2.21.2.exe). **Windows 10/11 x64; .NET 8.0.32 is bundled.** No application installer or separate .NET installation is required. **The EXE is unsigned**; Windows reputation warnings can still appear.
+[Download the portable v2.21.2.4 package](https://github.com/nemesis122/NewSidebar/releases/download/v2.21.2.4/Sidebar-v2.21.2.4-Portable.zip). **Windows 10/11 x64; .NET 8.0.33 is bundled.** No application installer or separate .NET installation is required. **The EXE is unsigned**; Windows reputation warnings can still appear.
 
 1. Exit the previous copy through its notification-area icon.
-2. Put the new EXE in your chosen writable folder. Keep **aurora-settings.json** beside it to retain your settings; different folders have separate settings.
-3. Start the new EXE and verify **2.21.2.0** and the launched path under **System information**.
+2. Extract the portable package into your chosen writable folder. Keep **aurora-settings.json** beside it to retain your settings; different folders have separate settings.
+3. Start the new EXE and verify **2.21.2.4** and the launched path under **System information**.
 
 Some CPU/mainboard readings require **PawnIO and administrator access**, configured under **Setup**. Moving an existing startup task to a new EXE may require one Windows approval; startup on/off and delay are retained. No startup task is created automatically on a fresh PC. Available readings depend on hardware, firmware, vendor drivers and account permissions.
 
@@ -76,11 +87,11 @@ All layout previews use **demo hardware and simulated readings**, rendered with 
 
 ## Validation and source
 
-**84,128 native UI checks**, **3,864 layout/color/width render combinations**, **128 data/configuration checks** and **31 sensor/driver-safety fixture checks** passed. Icon sizes are checked at 50% and 200% across all layouts, including repeated application without cumulative scaling. Existing regression checks cover source-selection fit behavior, settings controls and portable identity.
+**92,654 native UI checks**, **3,864 layout/color/width render combinations**, **181 data/configuration checks** and **124 sensor checks** passed. An optional replay of recorded hardware snapshots passes **185 sensor checks in total**, including the 124 base checks. The UI suite includes 18 application lifecycle checks covering startup, tray hide/restore, reopening settings, monitor fallback, card order, warnings, empty selection and backend shutdown.
 
-A real Libre → OHM/PawnIO → Libre switch passed on the test PC: 6 devices, 145/144/145 sensors and 9 available temperature readings per capture, with no backend warnings. The hybrid read one device directly and five via the bridge. Two relocated/renamed EXEs correctly report their own executable and adjacent configuration paths. The source archive is byte-checked against all 155 project files. These checks do not establish compatibility with every physical PC; no fresh-machine, reboot or long-duration test was performed for this build.
+Administrator hardware captures cover both embedded sources. Storage merge fixes were verified against all 15 recorded source pairs and separate fixtures. The release contains no personal measurements or local configuration. AMD/NVIDIA and other hardware variants are covered by fixtures, not a physical compatibility lab. No fresh Windows installation, driver reinstall, actual logon/reboot or long-duration test was performed. Missing sensors remain unavailable.
 
-The portable EXE independently reports **2.21.2.0**, LibreHardwareMonitor **0.9.6.0**, the modified OHM assembly **1.0.9513.1** and **zero OHM embedded resources**. The repository tag and **Sidebar-by-NemeSIS-v2.21.2-source.zip** contain matching source, tests, build script, dependency notices and modified MPL-2.0 source.
+The portable EXE reports **2.21.2.4** with .NET **8.0.33**, LibreHardwareMonitor **0.9.6.0**, modified OHM **1.0.9513.1** and zero OHM embedded resources. The release source archive includes the matching source, tests, build script and MPL-2.0 modifications.
 
 Build on Windows with the .NET 8 SDK:
 

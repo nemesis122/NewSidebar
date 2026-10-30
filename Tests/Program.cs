@@ -8,6 +8,9 @@ if(OperatingSystem.IsWindows() && args.Length==2 && args[0]=="--signal-startup-i
 }
 int passed=0;
 void Require(bool condition,string label) { if(!condition) throw new Exception(label); Console.WriteLine("PASS "+label); passed++; }
+CombinedSensorsChecks.Run(Require);
+TypographyChecks.Run(Require);
+CpuClockChecks.Run(Require);
 Require(JsonSerializer.Deserialize<Preferences>("{}")!.SensorSource==SensorSources.Libre,"Existing configurations keep Libre as the default");
 Require(JsonSerializer.Deserialize<Preferences>(JsonSerializer.Serialize(new Preferences{SensorSource=SensorSources.OpenPawn}))!.SensorSource==SensorSources.OpenPawn,"Embedded source selection survives restart");
 Require(SensorSources.Normalize("invalid")==SensorSources.Libre,"Unknown sources normalize to Libre");

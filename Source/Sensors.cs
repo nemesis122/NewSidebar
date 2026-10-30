@@ -27,9 +27,10 @@ public sealed class SensorService
     public int Interval = 1000;
     public IReadOnlyDictionary<string,string> CpuTemperatureSources = new Dictionary<string,string>();
     private int readCount;
+    private readonly object startLock=new();
     public event Action<Snapshot>? Updated;
     public Task? Worker { get; private set; }
-    public void Start() => Worker = Task.Run(Run);
+    public void Start(){lock(startLock){if(Worker==null)Worker=Task.Run(Run);}}
     public void Stop() => stop.Cancel();
     private async Task Run()
     {
@@ -105,19 +106,18 @@ public sealed class SensorService
             }
             void AddExact(string label, SensorType type, double max, params string[] names)
             {
-                var s = sensors.FirstOrDefault(s => s.SensorType == type && names.Contains(s.Name,StringComparer.OrdinalIgnoreCase));
+                var matches=sensors.Where(s=>s.SensorType==type&&names.Contains(s.Name,StringComparer.OrdinalIgnoreCase)).ToArray();
+                var s = matches.FirstOrDefault(s=>Reading(s).HasValue)??matches.FirstOrDefault();
                 if (s != null) metrics.Add(new(s.Identifier.ToString(), label, Reading(s), Unit(type), max));
             }
             if (category is "CPU" or "GPU")
             {
-                Add("Auslastung", SensorType.Load, 100, "CPU Total", "GPU Core", "GPU D3D 3D");
+                Add("Auslastung", SensorType.Load, 100, "CPU Total", "GPU Core", "GPU D3D 3D", "D3D 3D");
                 Add("Temperatur", SensorType.Temperature, 100, "Core (Tctl/Tdie)", "CPU Package", "Core (Tdie)", "GPU Core", "Core Average");
                 if(category=="CPU")
                 {
-                    var average=sensors.FirstOrDefault(s=>s.SensorType==SensorType.Clock && s.Name=="Cores (Average)" && Reading(s).HasValue);
-                    var cores=sensors.Where(s=>s.SensorType==SensorType.Clock && s.Name.StartsWith("Core #",StringComparison.OrdinalIgnoreCase) && !s.Name.Contains("Effective",StringComparison.OrdinalIgnoreCase)).Select(Reading).Where(v=>v.HasValue).ToArray();
-                    double? clock=average!=null ? Reading(average) : cores.Length>0 ? cores.Average(v=>v!.Value) : null;
-                    metrics.Add(new(hw.Identifier+"/clocks-average","Takt Ø",clock,"MHz",6000));
+                    var clock=CpuClockSelector.Select(sensors.Where(s=>s.SensorType==SensorType.Clock).Select(s=>(s.Name,Reading(s))));
+                    metrics.Add(new Metric(hw.Identifier+"/clocks-average","Takt Ø",clock.Value,"MHz",6000,hw.Name+" · "+hw.Provider+" · "+clock.Source){IsCpuClock=true});
                 }
                 else AddExact("Takt",SensorType.Clock,6000,"GPU Core","GPU Render");
                 Add("Leistung", SensorType.Power, 450, "Package", "CPU Package", "GPU Package", "GPU Power");
@@ -126,6 +126,8 @@ public sealed class SensorService
                 if (category == "GPU")
                 {
                     AddExact("VRAM belegt", SensorType.SmallData, 24576, "GPU Memory Used");
+                    var memoryTotal=sensors.FirstOrDefault(s=>s.SensorType==SensorType.SmallData&&s.Name.Equals("GPU Memory Total",StringComparison.OrdinalIgnoreCase)&&Reading(s)>0);
+                    if(memoryTotal!=null){int memoryIndex=metrics.FindIndex(m=>m.Label=="VRAM belegt");if(memoryIndex>=0)metrics[memoryIndex]=metrics[memoryIndex] with{Maximum=Reading(memoryTotal)!.Value};}
                     AddExact("VRAM Last", SensorType.Load, 100, "GPU Memory");
                 }
             }
@@ -217,7 +219,7 @@ public sealed class SensorService
             catch (Exception e) { warnings.Add(nic.Name + ": " + e.Message); }
         }
         foreach (var d in devices)
-            foreach (var m in d.Metrics.Where(m => !rows.Any(r => r.Id == m.Id))) rows.Add(new(m.Id, d.Name, m.Label, d.Category, m.Value, m.Unit));
+            foreach (var m in d.Metrics.Where(m => !rows.Any(r => r.Id == m.Id))) rows.Add(new(m.Id, d.Name, m.Label, m.IsCpuClock?"Clock":d.Category, m.Value, m.Unit,m.IsCpuClock?"Cpu":""));
         var seeds=new List<DevicePreferenceSeed>();
         foreach(var hw in hardware.Where(h=>h.PreferenceDeviceId.Length>0))
         {
@@ -247,7 +249,7 @@ public sealed class SensorService
         return result;
     }
     public static string Unit(SensorType type) => type.ToString() switch {
-        "Temperature" => "°C", "Load" or "Level" or "Control" or "Humidity" => "%", "Clock" => "MHz", "Voltage" => "V", "Power" => "W", "Fan" => "RPM", "Flow" => "L/h", "Data" => "GB", "SmallData" => "MB", "Throughput" => "B/s", "Current" => "A", "Frequency" => "Hz", "Energy" => "mWh", _ => "" };
+        "Temperature" => "°C", "Load" or "Level" or "Control" or "Humidity" => "%", "Clock" => "MHz", "Voltage" => "V", "Power" => "W", "Fan" => "RPM", "Flow" => "L/h", "Data" => "GB", "SmallData" => "MB", "Throughput" => "B/s", "Current" => "A", "Frequency" => "Hz", "Energy" => "mWh", "TimeSpan"=>"s", "Timing"=>"ns", "Noise"=>"dBA", "Conductivity"=>"µS/cm", _ => "" };
     [StructLayout(LayoutKind.Sequential)] private struct FileTime { public uint Low, High; public ulong Value => ((ulong)High << 32) | Low; }
     [DllImport("kernel32.dll")] private static extern bool GetSystemTimes(out FileTime idle, out FileTime kernel, out FileTime user);
     [StructLayout(LayoutKind.Sequential)] private struct MemoryStatus { public uint Length, Load; public ulong TotalPhysical, AvailablePhysical, TotalPage, AvailablePage, TotalVirtual, AvailableVirtual, AvailableExtended; }

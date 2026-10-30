@@ -14,7 +14,7 @@ public sealed class SidebarWindow : Window
 {
     public Preferences Prefs { get; } = Preferences.Load();
     public Snapshot? Latest { get; private set; }
-    private readonly SensorService service = new();
+    private readonly SensorService service;
     private readonly NativeDock dock;
     private readonly Forms.NotifyIcon tray;
     private readonly Grid root = new();
@@ -22,13 +22,15 @@ public sealed class SidebarWindow : Window
     private Grid cards=>scroll.Cards;
     private readonly TextBlock status = Ui.Text("SENSOREN WERDEN ERKANNT", 9, "Muted");
     private readonly Dictionary<string, IHardwareCard> views = new();
-    private string shape = "";
+    private HardwareSensorGroup? sensorGroup;
+    private string? shape;
     private readonly MetricHistory history=new();
     private SettingsWindow? settings;
     private Button? hideButton;
     private bool placing, exiting;
-    public SidebarWindow()
+    public SidebarWindow(SensorService? sensorService=null)
     {
+        service=sensorService??new();
         SetResourceReference(FontFamilyProperty,"AppFont");
         Title = "Sidebar by NemeSIS"; WindowStyle = WindowStyle.None; AllowsTransparency=true;ResizeMode = ResizeMode.NoResize;
         SetResourceReference(BackgroundProperty,"Back"); SetResourceReference(ForegroundProperty,"Text");
@@ -43,8 +45,8 @@ public sealed class SidebarWindow : Window
         var header = new Grid { Margin = new Thickness(4, 5, 2, 5) };
         header.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) }); header.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         var actions = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        var gear = Ui.Button("⚙", OpenSettings); gear.ToolTip = "Settings"; gear.SetResourceReference(BackgroundProperty,"Chrome"); System.Windows.Automation.AutomationProperties.SetAutomationId(gear,"OpenSettings"); gear.Padding = new Thickness(6,2,6,2);
-        var hide = Ui.Button("−", HideToTray); hide.ToolTip = "Hide to tray"; hide.SetResourceReference(BackgroundProperty,"Chrome"); hide.Padding = new Thickness(6,2,6,2); hide.Margin = new Thickness(5,0,0,0);
+        var gear = SidebarActionButton.Create(SidebarActionIcon.Settings,OpenSettings);
+        var hide = SidebarActionButton.Create(SidebarActionIcon.Minimize,HideToTray);hide.Margin=new Thickness(6,0,0,0);
         hideButton=hide;
         actions.Children.Add(gear); actions.Children.Add(hide); Grid.SetColumn(actions, 1); header.Children.Add(actions); root.Children.Add(header);
         Grid.SetRow(scroll,1); root.Children.Add(scroll);
@@ -73,10 +75,10 @@ public sealed class SidebarWindow : Window
         Application.Current.Resources["AppFont"]=Ui.Font(Prefs,"Segoe UI");
         ApplyTheme(); Topmost = Prefs.Topmost; Opacity = 1; service.Interval = Prefs.Interval;
         Prefs.SensorSource=SensorSources.Normalize(Prefs.SensorSource);
-        if(service.Source!=Prefs.SensorSource){Latest=null;shape="";cards.Children.Clear();views.Clear();}
+        if(service.Source!=Prefs.SensorSource){Latest=null;shape=null;cards.Children.Clear();views.Clear();}
         service.Source=Prefs.SensorSource;
         service.CpuTemperatureSources=new Dictionary<string,string>(Prefs.CpuTemperatureSources);
-        Place(); shape = ""; if (Latest != null) Render(Latest);
+        Place(); shape = null; if (Latest != null) Render(Latest);
         try { Prefs.Save(); } catch(Exception e) { status.Text = "Speichern fehlgeschlagen"; status.ToolTip = e.Message; }
     }
     private void ApplyTheme()
@@ -98,7 +100,7 @@ public sealed class SidebarWindow : Window
     }
     private void ResizeCards()
     {
-        if(hideButton!=null)hideButton.Visibility=ActualWidth<75?Visibility.Collapsed:Visibility.Visible;
+        if(hideButton!=null)hideButton.Visibility=ActualWidth<80?Visibility.Collapsed:Visibility.Visible;
         double availableHeight=Math.Max(100,root.ActualHeight>0?root.ActualHeight-root.RowDefinitions[0].ActualHeight:ActualHeight-28);
         scroll.Configure(Prefs.Fit,Math.Max(1,ActualWidth-4),availableHeight,Prefs.Columns>1,Prefs.ColumnWidth<200?200*Prefs.Columns:0);
     }
@@ -116,18 +118,27 @@ public sealed class SidebarWindow : Window
             Prefs.DeviceDefaultsApplied = true;
             try { Prefs.Save(); } catch { }
         }
-        var data = PinPlacement.Compose(snapshot,Prefs).Where(d => !Prefs.HiddenCategories.Contains(d.Category) && !Prefs.HiddenDevices.Contains(d.Id))
-            .Select(d=>d with {Name=Prefs.HardwareName(d.Id,d.Name),Metrics=d.Metrics.Where(m=>Prefs.IsMetricVisible(d.Id,m.Id)).ToList()}).Where(d=>d.Metrics.Count>0).ToList();
-        data = data.OrderBy(d => { int i = Prefs.Order.IndexOf(d.Category); return i < 0 ? 99 : i; }).ToList();
+        var data = SensorCardComposition.Visible(snapshot,Prefs);
         history.Record(data,snapshot.Time);
         var key = string.Join("|", data.Select(d => d.Id + ":" + d.Name + ":" + string.Join(",",d.Metrics.Select(m=>m.Id+"="+m.Label))));
         if (shape != key)
         {
             shape = key; cards.Children.Clear(); cards.ColumnDefinitions.Clear(); views.Clear();
-            Panel layout=Prefs.Columns>1?new HardwareCardGrid{Columns=Prefs.Columns}:new StackPanel();cards.Children.Add(layout);
-            foreach(var d in data){var card=CardLayouts.Create(d,Prefs,history);views[d.Id]=card;layout.Children.Add(card.View);}
+            sensorGroup=null;
+            if(data.Count==0)cards.Children.Add(Ui.Text("No cards enabled.\nSelect devices in Settings ⚙.",13,"Muted"));
+            else if(Prefs.CombineSensorCards)
+            {
+                sensorGroup=new HardwareSensorGroup(data,Prefs,history);cards.Children.Add(sensorGroup);
+                foreach(var pair in sensorGroup.Sections)views[pair.Key]=pair.Value;
+            }
+            else
+            {
+                Panel layout=Prefs.Columns>1?new HardwareCardGrid{Columns=Prefs.Columns}:new StackPanel();cards.Children.Add(layout);
+                foreach(var d in data){var card=CardLayouts.Create(d,Prefs,history);views[d.Id]=card;layout.Children.Add(card.View);}
+            }
         }
-        foreach (var d in data) if (views.TryGetValue(d.Id, out var view)) view.Update(d, Prefs);
+        if(sensorGroup!=null)sensorGroup.Update(data,Prefs);
+        else foreach (var d in data) if (views.TryGetValue(d.Id, out var view)) view.Update(d, Prefs);
         status.Text = snapshot.Time.ToString("HH:mm:ss") + " · " + snapshot.Devices.Count + " GERÄTE";
         status.ToolTip = snapshot.Warnings.Count > 0 ? string.Join("\n", snapshot.Warnings) : "Lokale Live-Abfragen · Keine Cloud-Verbindung";
         if (data.Count == 0 && cards.Children.Count == 0) cards.Children.Add(Ui.Text("No cards enabled.\nSelect devices in Settings ⚙.", 13, "Muted"));

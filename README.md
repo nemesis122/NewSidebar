@@ -1,8 +1,8 @@
-# Sidebar by NemeSIS v3.01.0.0
+# Sidebar by NemeSIS v3.01.1.0
 
 A customizable Windows hardware-monitor Sidebar with **97 layouts**, **19 color themes**, a tray icon and portable single-file delivery.
 
-[Download the portable EXE](https://github.com/nemesis122/NewSidebar/releases/download/v3.01.0.0/Sidebar-by-NemeSIS-v3.01.0.0.exe) · [Download matching source](https://github.com/nemesis122/NewSidebar/releases/download/v3.01.0.0/Sidebar-v3.01.0.0-Source.zip) · [Release](https://github.com/nemesis122/NewSidebar/releases/tag/v3.01.0.0)
+[Download the portable EXE](https://github.com/nemesis122/NewSidebar/releases/download/v3.01.1.0/Sidebar-by-NemeSIS-v3.01.1.0.exe) · [Download matching source](https://github.com/nemesis122/NewSidebar/releases/download/v3.01.1.0/Sidebar-v3.01.1.0-Source.zip) · [Release](https://github.com/nemesis122/NewSidebar/releases/tag/v3.01.1.0)
 
 ## Start and update
 

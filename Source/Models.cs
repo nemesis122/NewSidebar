@@ -138,6 +138,9 @@ public record Metric(string Id, string Label, double? Value, string Unit, double
 {
     public bool IsCpuClock { get; init; }
     public static string FormatNumber(double value)=>Math.Abs(value)>=1?Math.Truncate(value).ToString("0"):value.ToString("0.##");
+    // Units whose meaning lives in the decimals get a fixed precision; whole-number units keep FormatNumber.
+    private static string Fixed(double value,string format)=>value.ToString(format,System.Globalization.CultureInfo.InvariantCulture);
+    public static string FormatGigabytes(double value)=>Math.Abs(value)>=100?Fixed(Math.Truncate(value),"0"):Fixed(value,"0.0");
     public string Display(bool fahrenheit)
     {
         if(TextValue!=null)return TextValue;
@@ -147,13 +150,16 @@ public record Metric(string Id, string Label, double? Value, string Unit, double
         if(IsCpuClock && u=="MHz")return (v/1000).ToString("0.00",System.Globalization.CultureInfo.InvariantCulture)+" GHz";
         if (u == "°C" && fahrenheit) { v = v * 1.8 + 32; u = "°F"; }
         if(u=="MB/s")return Math.Floor(Math.Max(0,v)).ToString("0")+" MB/s";
+        if(u=="V")return Fixed(v,"0.000")+" V";
+        if(u=="GB")return FormatGigabytes(v)+" GB";
+        if(u is "Gbit/s" or "Mbit/s")return Fixed(v,"0.#")+" "+u;
         if (u == "B/s")
         {
             string[] units = { "B/s", "KB/s", "MB/s", "GB/s" }; int i = 0;
             while (v >= 1024 && i < 3) { v /= 1024; i++; }
-            return FormatNumber(v)+" "+units[i];
+            return (i>0&&Math.Abs(v)<10?Fixed(v,"0.#"):FormatNumber(v))+" "+units[i];
         }
-        if (u == "MHz" && v >= 1000) return FormatNumber(v / 1000)+" GHz";
+        if (u == "MHz" && v >= 1000) return Fixed(v / 1000,"0.00")+" GHz";
         return FormatNumber(v) + " " + u;
     }
 }

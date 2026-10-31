@@ -175,7 +175,7 @@ public sealed class SensorService
         if (GlobalMemoryStatusEx(ref mem))
         {
             double total = mem.TotalPhysical / 1073741824d, free = mem.AvailablePhysical / 1073741824d;
-            devices.Add(new("windows/ram", "RAM", $"{Metric.FormatNumber(total)} GB · Physischer Arbeitsspeicher", new() {
+            devices.Add(new("windows/ram", "RAM", $"{Metric.FormatGigabytes(total)} GB · Physischer Arbeitsspeicher", new() {
                 new("windows/ram/load", "Auslastung", Math.Round((total-free)/total*100,MidpointRounding.AwayFromZero), "%"),
                 new("windows/ram/used", "Belegt", total-free, "GB", total),
                 new("windows/ram/free", "Verfügbar", free, "GB", total),

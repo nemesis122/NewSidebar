@@ -25,7 +25,7 @@ static class CpuClockChecks
         check(new Metric("cpu/clock","Clock",4111,"MHz"){IsCpuClock=true}.Display(false)=="4.11 GHz","CPU frequency displays two decimals in GHz");
         check(new Metric("cpu/clock","Clock",800,"MHz"){IsCpuClock=true}.Display(false)=="0.80 GHz","Idle CPU frequencies retain sub-GHz precision");
         check(new Metric("cpu/clock","Clock",null,"MHz"){IsCpuClock=true}.Display(false)=="—","Missing CPU clocks remain unavailable rather than becoming zero");
-        check(new Metric("gpu/clock","Clock",4111,"MHz").Display(false)=="4 GHz","The CPU precision adjustment does not change GPU or generic clock formatting");
+        check(new Metric("gpu/clock","Clock",4111,"MHz").Display(false)=="4.11 GHz","GPU and generic clocks also show two decimals in GHz");
         var pinSnapshot=new Snapshot(new(){new("cpu","CPU","Any CPU",new())},new(){new("cpu/core/0","Any CPU","CPU Core #1","Clock",4111,"MHz","Cpu")},new(),DateTime.Now);
         var pin=PinPlacement.Compose(pinSnapshot,new Preferences{Pins=new(){"cpu/core/0"}}).Single();
         check(pin.Metrics.Single().IsCpuClock&&pin.Metrics.Single().Display(false)=="4.11 GHz","Individually pinned CPU core clocks preserve CPU-only precision");

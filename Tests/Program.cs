@@ -140,11 +140,11 @@ for(int i=3;i<1000;i++)history.Record(new[]{historyDevice},historyTime.AddMillis
 var manyDevices=Enumerable.Range(0,700).Select(i=>historyDevice with{Id="bounded/"+i}).ToArray();history.Record(manyDevices,historyTime.AddHours(1));Require(history.SeriesCount==MetricHistory.MaximumSeries,"History series count stays bounded across device changes");history.Record(Array.Empty<Device>(),historyTime.AddHours(2));Require(history.SeriesCount==0,"Expired disconnected devices are removed from history");
 var legacyLargePrefs=new Preferences{Layout="TwinRings.Large",FontScale=1.2,ValueTextScale=1.3};legacyLargePrefs.Save();var migratedLargePrefs=Preferences.Load();Require(migratedLargePrefs.Layout=="TwinRings"&&migratedLargePrefs.FontScale==1.2&&migratedLargePrefs.ValueTextScale==1.3,"Removed large-reading design migrates without changing the user text sliders");
 Require(new Metric("fraction","Load",31.7,"%").Display(false)=="31 %","Whole displayed readings truncate rather than round");
-Require(new Metric("voltage","Voltage",.73,"V").Display(false)=="0.73 V","Sub-unit voltage keeps decimals");
-Require(new Metric("voltage","Voltage",1.73,"V").Display(false)=="1 V","Values above one use whole readings in every unit");
-Require(new Metric("clock","Clock",3870,"MHz").Display(false)=="3 GHz","Whole formatting applies after clock conversion");
-Require(new Metric("bytes","Read",31.7*1024,"B/s").Display(false)=="31 KB/s","Byte rates truncate after unit scaling");
-Require(new Metric("memory","Used",13.9,"GB").Display(false)=="13 GB","Memory amounts use whole readings");
+Require(new Metric("voltage","Voltage",.73,"V").Display(false)=="0.730 V","Sub-unit voltage shows three decimals");
+Require(new Metric("voltage","Voltage",1.2564,"V").Display(false)=="1.256 V","Voltages above one keep three decimals");
+Require(new Metric("clock","Clock",3870,"MHz").Display(false)=="3.87 GHz","Generic clocks show two decimals in GHz");Require(new Metric("clock","Clock",795,"MHz").Display(false)=="795 MHz","Clocks below one GHz stay whole MHz");
+Require(new Metric("bytes","Read",31.7*1024,"B/s").Display(false)=="31 KB/s","Byte rates of ten and more truncate after unit scaling");Require(new Metric("bytes","Read",1.5*1024*1024*1024,"B/s").Display(false)=="1.5 GB/s","Byte rates below ten keep one decimal");
+Require(new Metric("memory","Used",13.94,"GB").Display(false)=="13.9 GB","Memory amounts keep one decimal");Require(new Metric("drive","Capacity",1863.02,"GB").Display(false)=="1863 GB","Large capacities use whole gigabytes");Require(new Metric("link","Adapter-Link",2.5,"Gbit/s").Display(false)=="2.5 Gbit/s","Link speeds keep their fraction");Require(new Metric("power","Power",88.7,"W").Display(false)=="88 W","Whole-number units are unchanged");
 Require(new Metric("negative","Temperature",-3.7,"°C").Display(false)=="-3 °C","Negative readings truncate toward zero");
 Require(new Metric("ip","IP",null,"IP",TextValue:"192.168.0.119").Display(false)=="192.168.0.119","Text and IP addresses preserve punctuation");
 

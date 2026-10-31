@@ -23,6 +23,7 @@ internal static class Program
   string folder=Path.Combine(TestRoot,"Layouts");Directory.CreateDirectory(folder);
   if(Environment.GetCommandLineArgs().Contains("--readability-only")){var args=Environment.GetCommandLineArgs();DesignReadabilityQA.Verify(Require,args[Array.IndexOf(args,"--readability-only")+1],args[^1]);Console.WriteLine($"{checks} design readability checks passed.");return;}
   if(Environment.GetCommandLineArgs().Contains("--lifecycle-only")){AppLifecycleQA.Verify(Require);Console.WriteLine($"{checks} app lifecycle checks passed.");return;}
+  if(Environment.GetCommandLineArgs().Contains("--gallery-only")){ReleasePreviewQA.Gallery(Require,folder);Console.WriteLine($"{checks} gallery checks passed.");return;}
   if(Environment.GetCommandLineArgs().Contains("--release-settings-only")){ReleasePreviewQA.Settings(Require,folder);Console.WriteLine($"{checks} release settings checks passed.");return;}
   ReleasePreviewQA.Verify(Require,folder);
   if(Environment.GetCommandLineArgs().Contains("--release-preview-only")){Console.WriteLine($"{checks} release preview checks passed.");return;}

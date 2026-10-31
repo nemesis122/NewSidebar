@@ -8,7 +8,7 @@ static class ReleasePreviewQA
 {
  public static void Verify(Action<bool,string> check,string folder)
  {
-  check(ReleaseIdentity.Version=="3.01.1.0"&&typeof(Aurora.App).Assembly.GetName().Version!.ToString()=="3.1.1.0","Published display identity preserves3.00.0.0 while CLR version is numeric");
+  check(ReleaseIdentity.Version=="3.01.2.0"&&typeof(Aurora.App).Assembly.GetName().Version!.ToString()=="3.1.2.0","Published display identity preserves3.00.0.0 while CLR version is numeric");
   var devices=new List<Device>{
    new("demo/cpu","CPU","AMD Ryzen 7 9800X3D · Demo",new(){new("load","Auslastung",24,"%"),new("temp","Temperatur",48,"°C"),new Metric("clock","Takt Ø",4800,"MHz",6000){IsCpuClock=true},new("power","Leistung",78,"W",200),new("volt","Spannung",.96,"V",2)}),
    new("demo/ram","RAM","32 GB · Physical memory · Demo",new(){new("load","Auslastung",43,"%"),new("used","Belegt",13,"GB",32),new("free","Verfügbar",18,"GB",32),new("total","Gesamt",32,"GB",32)}),

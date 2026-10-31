@@ -54,8 +54,9 @@ public abstract class ModernCardBase:Border,IHardwareCard
   if(number==null)return;string text=metric?.Display(p.Fahrenheit)??"—";int split=text.LastIndexOf(' ');
   number.Text=split<0?text:text[..split];if(unit!=null)unit.Text=split<0?(text=="—"?"":metric?.Unit??""):text[(split+1)..];
  }
- // Load is the most "live" reading for processors; network leads with download.
- protected static Metric? HeroMetric(Device device)=>device.Metrics.FirstOrDefault(m=>m.Label=="Auslastung"&&m.Unit=="%")??CardLayouts.MainMetric(device);
+ // Same rule as every other design: temperature leads wherever the device has one (CPU, GPU, drives);
+ // devices without one (RAM, custom values) fall back to their first reading.
+ protected static Metric? HeroMetric(Device device)=>CardLayouts.MainMetric(device);
  protected static bool Plottable(Metric m)=>m.Unit!="IP"&&m.TextValue==null;
  public static double? Ratio(Metric? m)
  {

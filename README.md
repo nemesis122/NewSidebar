@@ -1,8 +1,8 @@
-# Sidebar by NemeSIS v3.01.2.0
+# Sidebar by NemeSIS v3.01.3.0
 
 A customizable Windows hardware-monitor Sidebar with **97 layouts**, **19 color themes**, a tray icon and portable single-file delivery.
 
-[Download the portable EXE](https://github.com/nemesis122/NewSidebar/releases/download/v3.01.2.0/Sidebar-by-NemeSIS-v3.01.2.0.exe) · [Download matching source](https://github.com/nemesis122/NewSidebar/releases/download/v3.01.2.0/Sidebar-v3.01.2.0-Source.zip) · [Release](https://github.com/nemesis122/NewSidebar/releases/tag/v3.01.2.0)
+[Download the portable EXE](https://github.com/nemesis122/NewSidebar/releases/download/v3.01.3.0/Sidebar-by-NemeSIS-v3.01.3.0.exe) · [Download matching source](https://github.com/nemesis122/NewSidebar/releases/download/v3.01.3.0/Sidebar-v3.01.3.0-Source.zip) · [Release](https://github.com/nemesis122/NewSidebar/releases/tag/v3.01.3.0)
 
 ## Start and update
 
@@ -10,7 +10,7 @@ Download the EXE into a writable folder and close the previous instance before r
 
 ## New in v3.01
 
-- **Glass family:** six new layouts — Liquid Glass, Frost Glass, Aqua Glass, Prism Glass, Smoke Glass and Glass Tubes. Each reading sits in a glass capsule filled to its level; download/upload and drive read/write show a live 60-second trace inside their capsule. Link speed, totals and capacities stay plain rows.
+- **Glass family:** six new layouts — Liquid Glass, Frost Glass, Aqua Glass, Prism Glass, Smoke Glass and Glass Tubes. Each reading sits in a glass capsule filled to its level; download/upload and drive read/write show a live 60-second trace inside their capsule. Link speed shows how much of the link is in use; totals and capacities sit in an unfilled capsule.
 - The glass layouts follow every appearance setting: line/bar thickness, graphic size, widget background, text below graph, light themes and the shared HW Sensors frame. In stretched multi-column cards, bars keep the set thickness and spare height becomes even spacing.
 - **Five color themes:** Catppuccin Mocha, Tokyo Night, Rosé Pine, Kanagawa and Everforest.
 - **Reset on every settings page:** one button at the bottom of each page resets exactly that page (second click confirms). Overview and System reset everything; language, startup and sensor access are kept.

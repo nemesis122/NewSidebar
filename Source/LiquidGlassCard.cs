@@ -34,7 +34,8 @@ public sealed class LiquidGlassCard:ModernCardBase
  private readonly string second;
  private readonly bool light;
  private readonly Color rimTop,rimBottom;
- private readonly List<(string Id,Capsule Pill)> pills=new();
+ private readonly List<(string Id,Capsule Pill,bool Level)> pills=new();
+ private readonly HashSet<string> links=new();
  private readonly List<(string Id,TraceCapsule Trace)> traces=new();
  public LiquidGlassCard(Device device,Preferences p,MetricHistory history):this(device,p,history,GlassStyle.All[0]){}
  public LiquidGlassCard(Device device,Preferences p,MetricHistory history,GlassStyle style):base(device,p)
@@ -80,11 +81,16 @@ public sealed class LiquidGlassCard:ModernCardBase
    // Throughput (network DL/UL, drive read/write) has no fixed maximum: it gets a live trace.
    // Totals and capacities would always be a full bar, and network text values have no level.
    bool traced=m.Unit is "MB/s" or "B/s";
-   if(!Plottable(m)||network&&!traced||m.Label is "Gesamt" or "Kapazität"){content.Children.Add(new AddressReadoutPanel(Label(m.Label,p),Value(m,p,11.5)){Margin=new Thickness(4,3,4,3)});continue;}
+   // Totals, capacities and link speed sit in the same glass capsule but without a level:
+   // a fill there would always be full. Only text values such as IP addresses stay plain rows.
+   bool level=!(network&&!traced)&&m.Label is not ("Gesamt" or "Kapazität");
+   // Link speed: the capsule shows how much of the link download + upload use right now.
+   if(network&&m.Unit is "Gbit/s" or "Mbit/s")links.Add(m.Id);
+   if(!Plottable(m)){content.Children.Add(new AddressReadoutPanel(Label(m.Label,p),Value(m,p,11.5)){Margin=new Thickness(4,3,4,3)});continue;}
    FrameworkElement glass;
    bool separate=style.Tubes||below;
    if(traced){var trace=new TraceCapsule(D.Track,Accent,second,style,stroke,separate,light);traces.Add((m.Id,trace));glass=trace;}
-   else{var pill=new Capsule(D.Track,Accent,second,style,stroke,light);pills.Add((m.Id,pill));glass=pill;}
+   else{var pill=new Capsule(D.Track,Accent,second,style,stroke,light);pills.Add((m.Id,pill,level));glass=pill;}
    if(separate)
    {
     // Reading row and glass on separate lines: tubes put the row above, the text-below option beneath.
@@ -108,6 +114,15 @@ public sealed class LiquidGlassCard:ModernCardBase
   }
   Update(device,p);
  }
+ // Share of the link in use: (download + upload) against the link speed, both in MB/s.
+ private static double? LinkUse(Device device,Metric? link)
+ {
+  if(link?.Value is not double speed||!double.IsFinite(speed)||speed<=0)return null;
+  double capacity=speed*(link.Unit=="Gbit/s"?125:.125);
+  double used=device.Metrics.Where(m=>m.Unit=="MB/s"&&m.Value is double v&&double.IsFinite(v)).Sum(m=>Math.Max(0,m.Value!.Value))
+   +device.Metrics.Where(m=>m.Unit=="B/s"&&m.Value is double v&&double.IsFinite(v)).Sum(m=>Math.Max(0,m.Value!.Value)/1048576d);
+  return Math.Clamp(used/capacity,0,1);
+ }
  private static double Luminance(Color c)=>(.2126*c.R+.7152*c.G+.0722*c.B)/255;
  public sealed class FrameDecoration:Border{}
  private static string HueShift(string hex,double degrees)
@@ -129,7 +144,7 @@ public sealed class LiquidGlassCard:ModernCardBase
    ?new LinearGradientBrush(new GradientStopCollection{new GradientStop(Color.FromArgb(style.RimTop,a.R,a.G,a.B),0),new GradientStop(Color.FromArgb(style.RimTop,white.R,white.G,white.B),.35),new GradientStop(Color.FromArgb(style.RimBottom,b.R,b.G,b.B),1)},new Point(0,0),new Point(1,1))
    :new LinearGradientBrush(rimTop,rimBottom,new Point(0,0),new Point(0,1));
   SetHero(number,unit,device.Metrics.FirstOrDefault(m=>m.Id==heroId),p);
-  foreach(var (id,pill) in pills){var m=device.Metrics.FirstOrDefault(x=>x.Id==id);pill.Set(Ratio(m),m!=null&&Warn(m,p));}
+  foreach(var (id,pill,level) in pills){var m=device.Metrics.FirstOrDefault(x=>x.Id==id);pill.Set(links.Contains(id)?LinkUse(device,m):level?Ratio(m):null,m!=null&&Warn(m,p));}
   foreach(var (id,trace) in traces)trace.Set(history.Read(DeviceId,id),history.LatestTime,TimeSpan.FromMilliseconds(Math.Max(2500,p.Interval*2.5)));
  }
  private static void DrawGlassTrack(DrawingContext dc,Rect shape,double r,Color track,GlassStyle style,bool light)

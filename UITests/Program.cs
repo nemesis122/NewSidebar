@@ -12,7 +12,7 @@ internal static class Program
  [STAThread] static int Main()
  {
   SetErrorMode(3);
-  try {Run();return 0;}catch(Exception error){Console.Error.WriteLine(error);Console.Error.WriteLine("UI tests failed.");return 1;}
+  try {Run();return 0;}catch(Exception error){Console.Error.WriteLine(error);Console.Error.WriteLine("UI tests failed.");if(Environment.GetEnvironmentVariable("GITHUB_ACTIONS")=="true"){var chain=new System.Collections.Generic.List<string>();for(Exception? e=error;e!=null;e=e.InnerException)chain.Add(e.GetType().Name+": "+e.Message);string site=error.StackTrace?.Split('\n').FirstOrDefault(l=>l.Contains("Program"))?.Trim()??"";Console.WriteLine("::error title=UI tests failed::"+string.Join(" <- ",chain).Replace("%","%25").Replace("\r","").Replace("\n","%0A")+"%0A"+site.Replace("%","%25"));}return 1;}
  }
  static void Run()
  {

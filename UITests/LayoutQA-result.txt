@@ -1,1 +1,1 @@
-PASS: 92793 checks; 3864 render combinations; widget pin assignment, CPU selector, layout picker and mouse wheel verified.
+PASS: 127903 checks; 5096 render combinations; widget pin assignment, CPU selector, layout picker and mouse wheel verified.

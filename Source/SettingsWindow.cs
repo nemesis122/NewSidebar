@@ -495,7 +495,7 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
         if(current == "System")
         {
             bool admin = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
-            diagnostics.Text = $"Sidebar by NemeSIS {typeof(App).Assembly.GetName().Version?.ToString()} · .NET {Environment.Version}\nSensorquelle: {SensorSources.Name(P.SensorSource)}\nGestartete EXE: {Environment.ProcessPath}\nZugriff: {(admin ? "Administrator" : "Standardbenutzer")}\n"+ScheduledAutostart.Describe()+"\n"+
+            diagnostics.Text = $"Sidebar by NemeSIS {ReleaseIdentity.Version} · .NET {Environment.Version}\nSensorquelle: {SensorSources.Name(P.SensorSource)}\nGestartete EXE: {Environment.ProcessPath}\nZugriff: {(admin ? "Administrator" : "Standardbenutzer")}\n"+ScheduledAutostart.Describe()+"\n"+
                 (snapshot == null ? "Sensoren werden initialisiert …" : $"{snapshot.Devices.Count} Geräte · {snapshot.Sensors.Count} Messwerte · {snapshot.Time:HH:mm:ss}\n"+string.Join("\n",snapshot.Warnings));
             SettingsText.Apply(this,P.SettingsLanguage);
         }

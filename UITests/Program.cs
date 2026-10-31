@@ -23,6 +23,26 @@ internal static class Program
   string folder=Path.Combine(TestRoot,"Layouts");Directory.CreateDirectory(folder);
   if(Environment.GetCommandLineArgs().Contains("--readability-only")){var args=Environment.GetCommandLineArgs();DesignReadabilityQA.Verify(Require,args[Array.IndexOf(args,"--readability-only")+1],args[^1]);Console.WriteLine($"{checks} design readability checks passed.");return;}
   if(Environment.GetCommandLineArgs().Contains("--lifecycle-only")){AppLifecycleQA.Verify(Require);Console.WriteLine($"{checks} app lifecycle checks passed.");return;}
+  if(Environment.GetCommandLineArgs().Contains("--release-settings-only")){ReleasePreviewQA.Settings(Require,folder);Console.WriteLine($"{checks} release settings checks passed.");return;}
+  ReleasePreviewQA.Verify(Require,folder);
+  if(Environment.GetCommandLineArgs().Contains("--release-preview-only")){Console.WriteLine($"{checks} release preview checks passed.");return;}
+  RemovedLayoutsQA.Verify(Require);
+  VioletCollectionQA.Verify(Require,folder);
+  if(Environment.GetCommandLineArgs().Contains("--violet-collection-only")){Console.WriteLine($"{checks} violet collection checks passed.");return;}
+  VioletReferenceQA.Verify(Require,folder);
+  if(Environment.GetCommandLineArgs().Contains("--violet-only")){Console.WriteLine($"{checks} violet reference checks passed.");return;}
+  StudioDesignQA.Verify(Require,folder);
+  if(Environment.GetCommandLineArgs().Contains("--studio-only")){Console.WriteLine($"{checks} studio design checks passed.");return;}
+  CraftedDesignQA.Verify(Require,folder);
+  if(Environment.GetCommandLineArgs().Contains("--crafted-only")){Console.WriteLine($"{checks} crafted design checks passed.");return;}
+  AddressAlignmentQA.Verify(Require,folder);
+  if(Environment.GetCommandLineArgs().Contains("--address-only")){Console.WriteLine($"{checks} address alignment checks passed.");return;}
+  CollectionDesignQA.Verify(Require,folder);
+  if(Environment.GetCommandLineArgs().Contains("--collection-only")){Console.WriteLine($"{checks} collection design checks passed.");return;}
+  DistinctDesignQA.Verify(Require,folder);
+  if(Environment.GetCommandLineArgs().Contains("--distinct-only")){Console.WriteLine($"{checks} distinct design checks passed.");return;}
+  ModernCompactQA.Verify(Require,folder);
+  if(Environment.GetCommandLineArgs().Contains("--compact-only")){Console.WriteLine($"{checks} modern compact checks passed.");return;}
   DesignReadabilityQA.Verify(Require,folder,"Aktuell");
   SidebarButtonsQA.Verify(Require,folder);
   CpuClockPrecisionQA.Verify(Require);
@@ -63,7 +83,7 @@ internal static class Program
   }
 
 
-  foreach(string key in new[]{"BentoLive","GlassEdge","Waveform","VerticalRail","DashboardPro","SoftOLED"}){
+  foreach(string key in new[]{"GlassEdge","Waveform","VerticalRail","DashboardPro","SoftOLED"}){
    var history=new MetricHistory();var prefs=new Preferences{Layout=key};var card=CardLayouts.Create(cpu,prefs,history);var host=Host(card.View,DesignCatalog.Get("Midnight"),330);Arrange(host,330);Require(card is NextGenHardwareCard next&&next.Composition==key,"Non-radial widget composition is selectable: "+key);var primary=Descendants(host).OfType<TextBlock>().Single(t=>System.Windows.Automation.AutomationProperties.GetAutomationId(t)=="PrimaryMetric");Require(primary.Text=="52","Next-generation widgets feature the actual CPU temperature: "+key);var graphs=Descendants(host).OfType<HistoryAreaGraph>().ToArray();Require(graphs.All(g=>g.SampleCount==0),"Next-generation graphs start empty without synthetic samples: "+key);Require(graphs.Length==(key=="DashboardPro"?3:key is "BentoLive" or "Waveform"?1:0),"Only the planned real histories are created: "+key);
    var time=new DateTime(2026,10,29,12,0,0);for(int i=0;i<=60;i++)history.Record(new[]{cpu},time.AddSeconds(i));card.Update(cpu,prefs);Require(graphs.All(g=>g.SampleCount==61),"Next-generation graphs read the shared real history: "+key);
    var changed=cpu with{Metrics=cpu.Metrics.Select(m=>m.Id=="temp"?m with{Value=64}:m).ToList()};history.Record(new[]{changed},time.AddSeconds(61));card.Update(changed,prefs);Require(primary.Text=="64"&&Descendants(host).OfType<TextBlock>().Any(t=>t.Text=="64 °C"),"Primary and detailed readings update together: "+key);var zero=changed with{Metrics=changed.Metrics.Select(m=>m.Id=="temp"?m with{Value=0}:m).ToList()};card.Update(zero,prefs);Require(primary.Text=="0","A real zero remains visible: "+key);var missing=changed with{Metrics=changed.Metrics.Select(m=>m with{Value=null}).ToList()};history.Record(new[]{missing},time.AddSeconds(62));card.Update(missing,prefs);Require(primary.Text=="—","Missing readings clear the next-generation instrument: "+key);Require(history.Read(cpu.Id,"temp")[^1].Value==null,"Unavailable history samples remain gaps: "+key);var transparent=CardLayouts.Create(cpu,new(){Layout=key,Opacity=0});Require(transparent.View is Border {Background.Opacity:0}&&transparent.View.Opacity==1,"Next-generation opacity only affects the background: "+key);
@@ -113,7 +133,7 @@ internal static class Program
    var fresh=CardLayouts.Create(cpu,prefs);var freshHost=Host(fresh.View,DesignCatalog.Get("OLED"),330);Arrange(freshHost,330);Require(Descendants(freshHost).OfType<HistoryAreaGraph>().Single().SampleCount==0,"New chart has no invented warm-up history");
    var transparent=(Border)CardLayouts.Create(cpu,new Preferences{Layout=prefs.Layout,Opacity=0},history).View;Require(transparent.Opacity==1&&transparent.Background.Opacity==0,"Only the board background becomes transparent");
   }
-  foreach(string style in new[]{"Fluent","Glass","Bento","Precision","NeonEdge","OrbitStudio","MetroMosaic","SensorMap","SplitPanel","Typographic","Blueprint","FluentUI","FluentUICompact","FluentUIHero","WidgetBoard","CommandCenter"})foreach(string suffix in new[]{""})
+  foreach(string style in new[]{"Fluent","Glass","Precision","NeonEdge","OrbitStudio","MetroMosaic","SensorMap","SplitPanel","Typographic","Blueprint","FluentUI","FluentUICompact","FluentUIHero","WidgetBoard","CommandCenter"})foreach(string suffix in new[]{""})
   {
    string key=style+suffix;Require(CardLayouts.Get(key).Key==key,"New contemporary layout is individually selectable: "+key);
    var prefs=new Preferences{Layout=key,Theme="Midnight"};var card=CardLayouts.Create(cpu,prefs);var host=Host(card.View,DesignCatalog.Get("Midnight"),300);card.Update(cpu,prefs);Arrange(host,300);
@@ -126,6 +146,7 @@ internal static class Program
    if(style=="Glass")Require(((LinearGradientBrush)((Border)transparent.View).Background).GradientStops.All(s=>s.Color.A==0),"Glass background becomes fully transparent at zero opacity");
   }
   var originalGauge=CardLayouts.Create(cpu,new(){Layout="Gauges"});var originalHost=Host(originalGauge.View,DesignCatalog.Get("Graphite"),300);Arrange(originalHost,300);originalGauge.Update(cpu,new());Arrange(originalHost,300);Save(originalHost,Path.Combine(folder,"Gauges-reference.png"));
+  int renderBatch=0;
   foreach(var design in DesignCatalog.All)foreach(var layout in CardLayouts.All)foreach(double width in new[]{240d,430d})foreach(var device in new[]{cpu,net})
   {
    var prefs=new Preferences{Theme=design.Key,Layout=layout.Key,FontScale=1.4};var card=CardLayouts.Create(device,prefs);var parent=Host(card.View,design,width);Arrange(parent,width);card.Update(device,prefs);Arrange(parent,width);
@@ -137,7 +158,11 @@ internal static class Program
     Require(new[]{"DL","UL","Link"}.All(label=>texts.Any(t=>t.Text==label)),"All layouts use compact network abbreviations");Require(texts.Where(t=>t.Text is "DL" or "UL" or "Link").All(t=>(t.ToolTip as string)==(t.Text=="DL"?"Download":t.Text=="UL"?"Upload":"Adapter link speed")),"Network abbreviations retain full tooltip labels");
     foreach(var rate in texts.Where(t=>t.Text.EndsWith("MB/s")))Require(!titleBounds.IntersectsWith(Bounds(rate,parent)),"Network heading does not overlap speed");
    }
-   var bitmap=new RenderTargetBitmap((int)width,(int)Math.Ceiling(parent.ActualHeight),96,96,PixelFormats.Pbgra32);bitmap.Render(parent);
+   // RenderTargetBitmap owns native buffers that are not reflected in managed GC pressure.
+   // Bound the exhaustive harness's transient native-resource footprint.
+   if(renderBatch++%48==0){GC.Collect();GC.WaitForPendingFinalizers();GC.Collect();}
+   try{var bitmap=new RenderTargetBitmap((int)width,(int)Math.Ceiling(parent.ActualHeight),96,96,PixelFormats.Pbgra32);bitmap.Render(parent);}
+   catch(Exception ex){throw new Exception($"WPF render failed: {layout.Key}/{design.Key}/{device.Category} {width}x{parent.ActualHeight}",ex);}
   }
   foreach(var layoutKey in new[]{"Gauges","Dashboard"})
   {
@@ -260,7 +285,7 @@ internal static class Program
    var missing=sample with{Metrics=sample.Metrics.Select(m=>m with{Value=null}).ToList()};cyber.Update(missing,config);Require(Descendants(host).OfType<TextBlock>().Single(t=>System.Windows.Automation.AutomationProperties.GetAutomationId(t)=="PrimaryMetric").Text=="—","Missing cyber main values remain unavailable: "+key);
   }
   foreach(var available in new[]{cpu,cpu with{Metrics=new(){new("load","Auslastung",24,"%")}}}){var config=new Preferences{Layout="PerformanceHUD"};var performance=CardLayouts.Create(available,config);var host=Host(performance.View,DesignCatalog.Get("OLED"),300);Arrange(host,300);Require(Descendants(host).OfType<TextBlock>().Where(t=>t.Text=="Power"||t.Text=="Fan").Any()==available.Metrics.Any(m=>m.Label=="Leistung"||m.Unit=="RPM"),"Performance panel omits unavailable mini-instruments");var changed=available with{Metrics=available.Metrics.Select(m=>m with{Value=null}).ToList()};performance.Update(changed,config);Require(Descendants(host).OfType<TextBlock>().Single(t=>System.Windows.Automation.AutomationProperties.GetAutomationId(t)=="PrimaryMetric").Text=="—","Performance panel never invents a missing main reading");}
-  Require(CardLayouts.All.Count==69&&CardLayouts.All.All(l=>!l.Key.EndsWith(".Large")&&!l.Name.Contains("große Werte")),"Only normal designs are selectable");
+  Require(CardLayouts.All.Count==91&&CardLayouts.All.All(l=>!l.Key.EndsWith(".Large")&&!l.Name.Contains("große Werte")),"Only normal designs are selectable");
   foreach(var baseLayout in CardLayouts.All)
   {
    string legacy=baseLayout.Key+".Large";Require(CardLayouts.Get(legacy).Key==baseLayout.Key,"Removed variants resolve to their matching normal layout: "+legacy);Require(CardLayouts.ReadingMultiplier(legacy)==1,"Legacy variants no longer increase reading size: "+legacy);
@@ -318,7 +343,7 @@ internal static class Program
    var prefs=new Preferences{Layout=layout.Key,Columns=columns,ExpandMultiColumnReadings=true};var card=CardLayouts.Create(sample,prefs);card.Update(sample,prefs);var host=Host(card.View,DesignCatalog.Get("Graphite"),300);host.Height=440;Arrange(host,300);
    var panels=Descendants(host).OfType<ExpandedReadingsPanel>().ToArray();Require(panels.Length>0&&panels.All(p=>p.Expanded==(columns>1)),"Expanded readings are gated to multiple columns: "+layout.Key+" columns="+columns);
    var cardInstrument=Descendants(host).OfType<FrameworkElement>().FirstOrDefault(e=>System.Windows.Automation.AutomationProperties.GetAutomationId(e)=="CardInstrument"&&e.Visibility==Visibility.Visible);
-   if(cardInstrument!=null){var readingPanel=panels.Single(p=>p.FixedChildren==0);Require(Bounds(cardInstrument,host).Bottom<=Bounds(readingPanel,host).Top+.6,"Instrument is above every reading in one to four columns: "+layout.Key);Require(Grid.GetColumn(readingPanel)==0&&Grid.GetRow(readingPanel)==1,"Values use the full width below the instrument: "+layout.Key);}
+   if(cardInstrument!=null){var readingPanel=panels.Single(p=>p.FixedChildren==0);Require(Bounds(cardInstrument,host).Bottom<=Bounds(readingPanel,host).Top+.6,"Instrument is above every reading in one to four columns: "+layout.Key);if(card is VioletCollectionCard){var b=(Border)card.View;var actual=Bounds(readingPanel,host);var outer=Bounds(b,host);Require(Math.Abs(actual.Left-(outer.Left+b.Padding.Left+b.BorderThickness.Left))<.6&&Math.Abs(actual.Right-(outer.Right-b.Padding.Right-b.BorderThickness.Right))<.6,"Custom measured layouts use the full content width below their instrument: "+layout.Key);}else Require(Grid.GetColumn(readingPanel)==0&&Grid.GetRow(readingPanel)==1,"Values use the full width below the instrument: "+layout.Key);}
    var blocks=Descendants(host).OfType<TextBlock>().ToArray();Require(sample.Metrics.All(m=>blocks.Any(t=>t.Text==m.Display(false))||(layout.Key=="CyberPulse"&&blocks.Any(n=>System.Windows.Automation.AutomationProperties.GetAutomationId(n)=="PrimaryMetric"&&blocks.Any(u=>n.Text+" "+u.Text==m.Display(false))))),"Expanded mode preserves every reading: "+layout.Key);
    foreach(var panel in panels){Require(double.IsFinite(panel.ActualHeight)&&panel.ActualWidth<=300,"Expanded panels have finite bounded dimensions: "+layout.Key);foreach(UIElement child in panel.Children){var box=Bounds((FrameworkElement)child,panel);Require(box.Bottom<=panel.ActualHeight+.6+Math.Max(0,-((FrameworkElement)child).Margin.Bottom),"Expanded contents stay inside their panel: "+layout.Key+" "+box+" height="+panel.ActualHeight);}}
    if(columns==1){var baseline=CardLayouts.Create(sample,new Preferences{Layout=layout.Key});baseline.Update(sample,new());var reference=Host(baseline.View,DesignCatalog.Get("Graphite"),300);reference.Height=440;Arrange(reference,300);Require(blocks.Select(t=>t.Text).OrderBy(x=>x).SequenceEqual(Descendants(reference).OfType<TextBlock>().Select(t=>t.Text).OrderBy(x=>x))&&blocks.Single(t=>System.Windows.Automation.AutomationProperties.GetAutomationId(t)=="HardwareName").FontSize==Descendants(reference).OfType<TextBlock>().Single(t=>System.Windows.Automation.AutomationProperties.GetAutomationId(t)=="HardwareName").FontSize&&blocks.Single(t=>t.Text.Equals(Ui.SidebarLabel(sample.Category),StringComparison.OrdinalIgnoreCase)).FontSize==Descendants(reference).OfType<TextBlock>().Single(t=>t.Text.Equals(Ui.SidebarLabel(sample.Category),StringComparison.OrdinalIgnoreCase)).FontSize,"One-column graph placement preserves readings and heading sizes: "+layout.Key);}
@@ -393,7 +418,7 @@ internal static class Program
    sidebar.Prefs.SettingsLanguage=language.Key;navigate.Invoke(settings,new object[]{"System"});settings.Refresh(fakeSnapshot);Arrange(settingsRoot,960);
    var diagnostic=(TextBlock)typeof(SettingsWindow).GetField("diagnostics",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)!.GetValue(settings)!;
    Require(diagnostic.Text.Contains(SettingsText.Translate("Gestartete EXE",language.Key)+": "+Environment.ProcessPath),"System information shows the running EXE in "+language.Key);
-   Require(diagnostic.Text.Contains(typeof(Aurora.App).Assembly.GetName().Version!.ToString(3)),"System information shows the running assembly version in "+language.Key);
+   Require(diagnostic.Text.Contains(ReleaseIdentity.Version),"System information shows the running assembly version in "+language.Key);
   }
   dynamic scheduler=Activator.CreateInstance(Type.GetTypeFromProgID("Schedule.Service")!)!;scheduler.Connect();
   foreach(bool startupEnabled in new[]{true,false})

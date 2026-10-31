@@ -1,11 +1,6 @@
 name: Build and publish release
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - Source/SidebarByNemeSIS.csproj
-      - .github/workflows/release.yml
   workflow_dispatch:
 
 permissions:
@@ -30,7 +25,7 @@ jobs:
         shell: pwsh
         run: |
           [xml]$project = Get-Content Source/SidebarByNemeSIS.csproj
-          $version = [string]$project.Project.PropertyGroup.Version
+          $version = [string]$project.Project.PropertyGroup.InformationalVersion
           if ($version -notmatch '^\d+\.\d+\.\d+\.\d+$') { throw 'Expected four-part release version' }
           "RELEASE_VERSION=$version" >> $env:GITHUB_ENV
       - name: Data and configuration tests

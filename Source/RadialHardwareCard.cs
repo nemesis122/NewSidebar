@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -59,7 +59,7 @@ public sealed class RadialHardwareCard:Border,IHardwareCard
  internal sealed class ReadoutPanel:Panel
  {
   private readonly TextBlock label,value;private readonly double font;private bool inline;
-  public ReadoutPanel(TextBlock label,TextBlock value,double font){this.label=label;this.value=value;this.font=font;Children.Add(label);Children.Add(value);}
+  public ReadoutPanel(TextBlock label,TextBlock value,double font){this.label=label;this.value=value;this.font=font;if(value.TextWrapping==TextWrapping.Wrap)value.TextAlignment=TextAlignment.Right;Children.Add(label);Children.Add(value);}
   private static double TextWidth(TextBlock text,double? size=null)=>new FormattedText(text.Text,CultureInfo.InvariantCulture,FlowDirection.LeftToRight,new Typeface(text.FontFamily,text.FontStyle,text.FontWeight,text.FontStretch),size??text.FontSize,Brushes.White,VisualTreeHelper.GetDpi(text).PixelsPerDip).WidthIncludingTrailingWhitespace;
   protected override Size MeasureOverride(Size available)
   {

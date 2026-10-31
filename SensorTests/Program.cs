@@ -6,6 +6,7 @@ if(OperatingSystem.IsWindows())SensorCheckProcessSafety.SetErrorMode(3);
 int passed=0;
 void Check(bool value,string name){if(!value)throw new Exception(name);Console.WriteLine("PASS "+name);passed++;}
 HardwareMappingChecks.Run(Check);
+ReleaseHardwareMatrixChecks.Run(Check);
 int replay=Array.IndexOf(args,"--replay");if(replay>=0&&replay+1<args.Length)RealHardwareReplayChecks.Run(args[replay+1],Check);
 
 // These checks execute before any optional hardware test.
@@ -100,7 +101,7 @@ if(args.Contains("--hardware"))
     foreach(var source in new[]{SensorSources.Libre,SensorSources.OpenPawn,SensorSources.Libre})
     {
         var watch=System.Diagnostics.Stopwatch.StartNew();session.Select(source);var warnings=new List<string>();var hw=session.Capture(warnings);
-        Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new{Source=source,Devices=hw.Length,Sensors=hw.Sum(h=>h.Sensors.Length),TemperatureSensors=hw.Sum(h=>h.Sensors.Count(s=>s.SensorType==SensorType.Temperature&&s.Value.HasValue)),Providers=hw.GroupBy(h=>h.Provider).Select(g=>new{Provider=g.Key,Devices=g.Count()}),Milliseconds=watch.ElapsedMilliseconds,Warnings=warnings}));
+        Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new{Source=source,Models=hw.Select(h=>new{Name=h.Name,Kind=h.HardwareType}).ToArray(),Devices=hw.Length,Sensors=hw.Sum(h=>h.Sensors.Length),TemperatureSensors=hw.Sum(h=>h.Sensors.Count(s=>s.SensorType==SensorType.Temperature&&s.Value.HasValue)),Providers=hw.GroupBy(h=>h.Provider).Select(g=>new{Provider=g.Key,Devices=g.Count()}),Milliseconds=watch.ElapsedMilliseconds,Warnings=warnings}));
         Check(hw.All(h=>h.Sensors.All(s=>s.Value==null||double.IsFinite(s.Value.Value))),"Actual engine returns finite readings: "+source);
     }
 }

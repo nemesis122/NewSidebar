@@ -31,7 +31,7 @@ public abstract class ModernCardBase:Border,IHardwareCard
  {
   var stack=new StackPanel{Margin=new Thickness(0,0,0,8)};
   var line=new StackPanel{Orientation=Orientation.Horizontal};line.Children.Add(Ui.HardwareIcon(device.Category,15*S*F(p.TitleTextScale)));
-  var title=Ui.SidebarText(device.Category,12*S*F(p.TitleTextScale),"Muted");title.FontWeight=FontWeights.SemiBold;title.VerticalAlignment=VerticalAlignment.Center;line.Children.Add(title);stack.Children.Add(line);
+  var title=Ui.SidebarText(device.Category,12*S*F(p.TitleTextScale));title.FontWeight=FontWeights.SemiBold;title.VerticalAlignment=VerticalAlignment.Center;line.Children.Add(title);stack.Children.Add(line);
   var name=Ui.HardwareTitle(device.Name,13*S*F(p.HardwareTextScale),p.HardwareNames.ContainsKey(device.Id));name.TextWrapping=TextWrapping.Wrap;name.TextTrimming=TextTrimming.None;name.Margin=new Thickness(0,3,0,0);stack.Children.Add(name);
   return stack;
  }

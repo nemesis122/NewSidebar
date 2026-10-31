@@ -67,17 +67,15 @@ public sealed class LiquidGlassCard:ModernCardBase
   {
    heroId=hero.Id;(number,unit)=HeroNumber(p,30);
    var line=new StackPanel{Orientation=Orientation.Horizontal};line.Children.Add(number);line.Children.Add(unit);
-   var heroRow=new Grid{Margin=new Thickness(0,0,0,9)};heroRow.ColumnDefinitions.Add(new(){Width=GridLength.Auto});heroRow.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star)});
-   heroRow.Children.Add(new Viewbox{Child=line,Stretch=Stretch.Uniform,StretchDirection=StretchDirection.DownOnly,HorizontalAlignment=HorizontalAlignment.Left});
-   var caption=Label(hero.Label,p,10.5);caption.HorizontalAlignment=HorizontalAlignment.Right;caption.VerticalAlignment=VerticalAlignment.Bottom;caption.Margin=new Thickness(8,0,0,6);Grid.SetColumn(caption,1);heroRow.Children.Add(caption);
-   content.Children.Add(heroRow);
+   // The big number leads; its own capsule right below names it and shows its level.
+   content.Children.Add(new Viewbox{Child=line,Stretch=Stretch.Uniform,StretchDirection=StretchDirection.DownOnly,HorizontalAlignment=HorizontalAlignment.Left,Margin=new Thickness(0,0,0,9)});
   }
   // Grafikgröße scales capsule and trace size; Linien-/Balkenstärke scales bar thickness and
   // line widths. "Text unter dem Graphen" moves each reading row beneath its capsule.
   double scale=S*Preferences.TextFactor(p.InstrumentScale),stroke=DesignCatalog.GraphSize(p);
   bool below=CardLayouts.ReadingsBelow(p);
   double textRow=Math.Max(10.5*F(p.LabelTextScale),12*F(p.ValueTextScale))*S*1.45;
-  foreach(var m in device.Metrics.Where(m=>m.Id!=heroId))
+  foreach(var m in device.Metrics)
   {
    // Throughput (network DL/UL, drive read/write) has no fixed maximum: it gets a live trace.
    // Totals and capacities would always be a full bar, and network text values have no level.

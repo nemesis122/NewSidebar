@@ -37,4 +37,4 @@ Catppuccin Mocha, Tokyo Night, Rosé Pine, Kanagawa and Everforest, each with it
 
 ## Download and update
 
-Download **Sidebar-by-NemeSIS-v3.01.0.0.exe** for the portable app. **Sidebar-v3.01.0.0-Source.zip** is the matching source. Close the previous instance, keep `aurora-settings.json` beside the chosen EXE, and review the startup target after moving or renaming the app. Advanced CPU/motherboard access requires PawnIO and the appropriate rights. The EXE is unsigned. See **VALIDATION.txt** and **SHA256SUMS.txt** for scope and integrity.
+Download **Sidebar-by-NemeSIS-v3.01.0.0.exe** for the portable app. **Sidebar-v3.01.0.0-Source.zip** is the matching source. Close the previous instance, keep `aurora-settings.json` beside the chosen EXE, and review the startup target after moving or renaming the app. Advanced CPU/motherboard access requires PawnIO and the appropriate rights. The EXE is unsigned. See **SHA256SUMS.txt** for integrity.

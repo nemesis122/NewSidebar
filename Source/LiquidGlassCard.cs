@@ -144,7 +144,7 @@ public sealed class LiquidGlassCard:ModernCardBase
    ?new LinearGradientBrush(new GradientStopCollection{new GradientStop(Color.FromArgb(style.RimTop,a.R,a.G,a.B),0),new GradientStop(Color.FromArgb(style.RimTop,white.R,white.G,white.B),.35),new GradientStop(Color.FromArgb(style.RimBottom,b.R,b.G,b.B),1)},new Point(0,0),new Point(1,1))
    :new LinearGradientBrush(rimTop,rimBottom,new Point(0,0),new Point(0,1));
   SetHero(number,unit,device.Metrics.FirstOrDefault(m=>m.Id==heroId),p);
-  foreach(var (id,pill,level) in pills){var m=device.Metrics.FirstOrDefault(x=>x.Id==id);pill.Set(links.Contains(id)?LinkUse(device,m):level?Ratio(m):null,m!=null&&Warn(m,p));}
+  foreach(var (id,pill,level) in pills){var m=device.Metrics.FirstOrDefault(x=>x.Id==id);pill.Exact=links.Contains(id);pill.Set(links.Contains(id)?LinkUse(device,m):level?Ratio(m):null,m!=null&&Warn(m,p));}
   foreach(var (id,trace) in traces)trace.Set(history.Read(DeviceId,id),history.LatestTime,TimeSpan.FromMilliseconds(Math.Max(2500,p.Interval*2.5)));
  }
  private static void DrawGlassTrack(DrawingContext dc,Rect shape,double r,Color track,GlassStyle style,bool light)
@@ -158,6 +158,8 @@ public sealed class LiquidGlassCard:ModernCardBase
  {
   private readonly Color track,start,end,warn=C(WarningColor);private readonly GlassStyle style;private readonly double stroke;private readonly bool light;private double? ratio;private bool hot;
   public Capsule(string track,string accent,string secondary,GlassStyle style,double stroke,bool light){this.track=C(track);start=C(accent);end=C(secondary);this.style=style;this.stroke=stroke;this.light=light;IsHitTestVisible=false;}
+  // Exact: the fill shows the true share without a minimum stub (link use is often near zero).
+  public bool Exact {get;set;}
   public void Set(double? r,bool w){ratio=r;hot=w;InvalidateVisual();}
   protected override void OnRender(DrawingContext dc)
   {
@@ -167,8 +169,13 @@ public sealed class LiquidGlassCard:ModernCardBase
    var clip=new RectangleGeometry(shape,r,r);clip.Freeze();dc.PushClip(clip);
    var a=hot?warn:start;var b=hot?warn:end;
    var liquid=new LinearGradientBrush(Color.FromArgb(style.LiquidA,a.R,a.G,a.B),Color.FromArgb(style.LiquidB,b.R,b.G,b.B),new Point(0,0),new Point(1,0));
-   double fillWidth=Math.Max(h*.6,w*v);dc.DrawRectangle(liquid,null,new Rect(0,0,fillWidth,h));
-   double meniscus=2*stroke;if(h>=10)dc.DrawRectangle(new SolidColorBrush(Color.FromArgb(210,a.R,a.G,a.B)),null,new Rect(Math.Max(0,fillWidth-meniscus),0,meniscus,h));
+   double fillWidth=Exact?w*v:Math.Max(h*.6,w*v);dc.DrawRectangle(liquid,null,new Rect(0,0,fillWidth,h));
+   // Meniscus: a bright edge at the liquid level that fades out across the middle, where the
+   // reading text sits, so it never cuts through digits.
+   double meniscus=2*stroke;
+   if(h>=10&&fillWidth>=meniscus){var edge=Color.FromArgb(210,a.R,a.G,a.B);var clear=Color.FromArgb(0,a.R,a.G,a.B);
+    var fade=new LinearGradientBrush(new GradientStopCollection{new GradientStop(edge,0),new GradientStop(edge,.22),new GradientStop(clear,.36),new GradientStop(clear,.64),new GradientStop(edge,.78),new GradientStop(edge,1)},new Point(0,0),new Point(0,1));fade.Freeze();
+    dc.DrawRectangle(fade,null,new Rect(Math.Max(0,fillWidth-meniscus),0,meniscus,h));}
    // Smoke glass: the liquid glows, a soft lighter core along its upper half.
    if(style.Smoke>0)dc.DrawRectangle(new LinearGradientBrush(Color.FromArgb(70,255,255,255),Color.FromArgb(0,255,255,255),new Point(0,0),new Point(0,.6)),null,new Rect(0,0,fillWidth,h));
    dc.Pop();

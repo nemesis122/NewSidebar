@@ -8,7 +8,7 @@ static class ReleasePreviewQA
 {
  public static void Verify(Action<bool,string> check,string folder)
  {
-  check(ReleaseIdentity.Version=="3.01.3.0"&&typeof(Aurora.App).Assembly.GetName().Version!.ToString()=="3.1.3.0","Published display identity preserves3.00.0.0 while CLR version is numeric");
+  check(ReleaseIdentity.Version=="3.01.4.0"&&typeof(Aurora.App).Assembly.GetName().Version!.ToString()=="3.1.4.0","Published display identity preserves3.00.0.0 while CLR version is numeric");
   var (devices,hist)=Demo();Directory.CreateDirectory(folder);
   foreach(string layout in new[]{"VioletMonitor","VioletTwin","FluentGlass","LiquidGlass","FrostGlass","AquaGlass","PrismGlass","SmokeGlass","GlassTubes"})foreach(int columns in new[]{1,2})
   {

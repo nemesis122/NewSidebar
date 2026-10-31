@@ -2,7 +2,7 @@
 
 A customizable hardware monitor that docks to the edge of your Windows desktop: CPU, GPU, RAM, drives and network in **97 layouts** and **19 color themes**, as one portable EXE with .NET included.
 
-**[Download v3.01.3.0](https://github.com/nemesis122/NewSidebar/releases/download/v3.01.3.0/Sidebar-by-NemeSIS-v3.01.3.0.exe)** · [Source ZIP](https://github.com/nemesis122/NewSidebar/releases/download/v3.01.3.0/Sidebar-v3.01.3.0-Source.zip) · [All releases](https://github.com/nemesis122/NewSidebar/releases)
+**[Download v3.01.4.0](https://github.com/nemesis122/NewSidebar/releases/download/v3.01.4.0/Sidebar-by-NemeSIS-v3.01.4.0.exe)** · [Source ZIP](https://github.com/nemesis122/NewSidebar/releases/download/v3.01.4.0/Sidebar-v3.01.4.0-Source.zip) · [All releases](https://github.com/nemesis122/NewSidebar/releases)
 
 <p align="center">
 <a href="Previews/LiquidGlass-2Column.png"><img src="Previews/LiquidGlass-2Column.png" width="560" alt="Liquid Glass, two columns, demo data"></a>

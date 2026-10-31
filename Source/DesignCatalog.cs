@@ -20,7 +20,12 @@ public static class DesignCatalog
         new("Compact","Compact","Kleine Abstände, mehr Platz","#10151D","#171F29","#334150","#EEF5FC","#A1B4C8","#73C7F3","#2A3948",6,8,5,3,"Compact"),
         new("Minimal","Minimal","Flache Zeilen ohne Kartenrahmen","#14171C","#14171C","#3A424E","#F0F2F5","#A5B0BE","#A4B8D4","#303641",0,9,12,2,"Minimal"),
         new("Light","Light","Helle Karten mit dunkler Schrift","#EDF2F6","#FFFFFF","#CBD6E2","#172D42","#586D83","#007968","#E3EAF0",12),
-        new("Arctic","Arctic","Eisblau und sachlich","#DFEAF4","#F5FAFF","#B8CCDF","#152F49","#49647E","#1765A5","#D6E5F1",5)
+        new("Arctic","Arctic","Eisblau und sachlich","#DFEAF4","#F5FAFF","#B8CCDF","#152F49","#49647E","#1765A5","#D6E5F1",5),
+        new("Catppuccin","Catppuccin Mocha","Weiche Pastelltöne auf warmem Dunkelblau","#11111B","#1E1E2E","#45475A","#CDD6F4","#A6ADC8","#CBA6F7","#313244",12),
+        new("TokyoNight","Tokyo Night","Nächtliches Indigo mit klaren Neonakzenten","#16161E","#1A1B26","#2F3549","#C0CAF5","#A9B1D6","#7AA2F7","#292E42",10),
+        new("RosePine","Rosé Pine","Gedämpftes Violett mit Rosé und Gold","#191724","#1F1D2E","#403D52","#E0DEF4","#908CAA","#C4A7E7","#26233A",12),
+        new("Kanagawa","Kanagawa","Tusche-Blau mit Wellenschaum und Herbstorange","#16161D","#1F1F28","#363646","#DCD7BA","#C8C093","#7E9CD8","#2A2A37",8),
+        new("Everforest","Everforest","Ruhiges Waldgrün mit warmem Papierton","#232A2E","#2D353B","#475258","#D3C6AA","#9DA9A0","#A7C080","#3D484D",10)
     };
     public static SidebarDesign Get(string? key)=>All.FirstOrDefault(d=>d.Key==key) ?? All.First(d=>d.Key=="Midnight");
     public static string ColorOr(string? value,string fallback)=>value!=null&&System.Text.RegularExpressions.Regex.IsMatch(value.Trim(),"^#[0-9a-fA-F]{6}$")?value.Trim().ToUpperInvariant():fallback;
@@ -32,6 +37,11 @@ public static class DesignCatalog
         if(d.Key=="Terminal")return d.Accent;
         if(d.Key is "Light" or "Arctic")return category switch {"CPU"=>"#087D67","RAM"=>"#2568A3","GPU"=>"#7351B9","Drives"=>"#A45C0B","Network"=>"#006E84",_=>d.Accent};
         if(d.Key=="Nord")return category switch {"CPU"=>"#A3BE8C","RAM"=>"#81A1C1","GPU"=>"#B48EAD","Drives"=>"#EBCB8B","Network"=>"#88C0D0",_=>d.Accent};
+        if(d.Key=="Catppuccin")return category switch {"CPU"=>"#A6E3A1","RAM"=>"#89B4FA","GPU"=>"#CBA6F7","Drives"=>"#FAB387","Network"=>"#89DCEB",_=>d.Accent};
+        if(d.Key=="TokyoNight")return category switch {"CPU"=>"#9ECE6A","RAM"=>"#7AA2F7","GPU"=>"#BB9AF7","Drives"=>"#E0AF68","Network"=>"#7DCFFF",_=>d.Accent};
+        if(d.Key=="RosePine")return category switch {"CPU"=>"#9CCFD8","RAM"=>"#3E8FB0","GPU"=>"#C4A7E7","Drives"=>"#F6C177","Network"=>"#EBBCBA",_=>d.Accent};
+        if(d.Key=="Kanagawa")return category switch {"CPU"=>"#98BB6C","RAM"=>"#7E9CD8","GPU"=>"#957FB8","Drives"=>"#FFA066","Network"=>"#7FB4CA",_=>d.Accent};
+        if(d.Key=="Everforest")return category switch {"CPU"=>"#A7C080","RAM"=>"#7FBBB3","GPU"=>"#D699B6","Drives"=>"#DBBC7F","Network"=>"#83C092",_=>d.Accent};
         if(d.Key=="Gruvbox")return category switch {"CPU"=>"#B8BB26","RAM"=>"#83A598","GPU"=>"#D3869B","Drives"=>"#FABD2F","Network"=>"#8EC07C",_=>d.Accent};
         return category switch {"CPU"=>"#66DEC5","RAM"=>"#78B9FC","GPU"=>"#AC9BFA","Drives"=>"#F6BC70","Network"=>"#7DD9EC",_=>d.Accent};
     }

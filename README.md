@@ -1,14 +1,21 @@
-# Sidebar by NemeSIS v3.00.0.0
+# Sidebar by NemeSIS v3.01.0.0
 
-A customizable Windows hardware-monitor Sidebar with **91 layouts**, **14 color themes**, a tray icon and portable single-file delivery.
+A customizable Windows hardware-monitor Sidebar with **97 layouts**, **19 color themes**, a tray icon and portable single-file delivery.
 
-[Download the portable EXE](https://github.com/nemesis122/NewSidebar/releases/download/v3.00.0.0/Sidebar-by-NemeSIS-v3.00.0.0.exe) · [Download matching source](https://github.com/nemesis122/NewSidebar/releases/download/v3.00.0.0/Sidebar-by-NemeSIS-v3.00.0.0-source.zip) · [Release](https://github.com/nemesis122/NewSidebar/releases/tag/v3.00.0.0)
+[Download the portable EXE](https://github.com/nemesis122/NewSidebar/releases/download/v3.01.0.0/Sidebar-by-NemeSIS-v3.01.0.0.exe) · [Download matching source](https://github.com/nemesis122/NewSidebar/releases/download/v3.01.0.0/Sidebar-v3.01.0.0-Source.zip) · [Release](https://github.com/nemesis122/NewSidebar/releases/tag/v3.01.0.0)
 
 ## Start and update
 
 Download the EXE into a writable folder and close the previous instance before running it. .NET is included. To preserve your choices, keep `aurora-settings.json` beside the EXE. The actual EXE/configuration/startup paths are shown in System information. If you move or rename the EXE, review the startup target in Setup. Advanced sensor setup may require one administrator approval. The EXE is unsigned.
 
-This release uses the restored v2.22.8.0 design selection. The six subsequent concept experiments are not included. The requested 18 rejected layouts and their selector names remain removed; saved removed names safely fall back to Original.
+## New in v3.01
+
+- **Glass family:** six new layouts — Liquid Glass, Frost Glass, Aqua Glass, Prism Glass, Smoke Glass and Glass Tubes. Each reading sits in a glass capsule filled to its level; download/upload and drive read/write show a live 60-second trace inside their capsule. Link speed, totals and capacities stay plain rows.
+- The glass layouts follow every appearance setting: line/bar thickness, graphic size, widget background, text below graph, light themes and the shared HW Sensors frame. In stretched multi-column cards, bars keep the set thickness and spare height becomes even spacing.
+- **Five color themes:** Catppuccin Mocha, Tokyo Night, Rosé Pine, Kanagawa and Everforest.
+- **Reset on every settings page:** one button at the bottom of each page resets exactly that page (second click confirms). Overview and System reset everything; language, startup and sensor access are kept.
+
+The v3.00 design selection is unchanged; the 18 removed layouts stay removed and saved removed names fall back to Original.
 
 ## Make it yours
 
@@ -16,7 +23,7 @@ This release uses the restored v2.22.8.0 design selection. The six subsequent co
 
 | Area | What you can change |
 | --- | --- |
-| Layout and placement | 91 layouts; monitor; left/right/top/bottom placement; column width; 1–4 columns; fit-to-view or scrolling; readings beneath the instrument |
+| Layout and placement | 97 layouts; monitor; left/right/top/bottom placement; column width; 1–4 columns; fit-to-view or scrolling; readings beneath the instrument |
 | Typography | Font family, general size, separate widget-title, hardware-name, label, reading, instrument-number and unit sizes; individual visibility |
 | Hardware icons | Show/hide and size |
 | Colors and graphics | Color theme, text/label/hardware-name/reading colors, category graph colors, secondary color, graph track, graphic size and thickness |
@@ -72,6 +79,6 @@ The source includes synthetic mapping tests for Ryzen 5900X, 9800X3D and 9950X3D
 
 ## Validation and source
 
-127,903 native UI checks / 5,096 render combinations, 181 data checks and 336 sensor fixture/safety checks passed. The fresh live source-switch smoke test passed339 checks including3 live checks. Short live testing was limited to the available Ryzen5900X/RTX3080 system. No universal hardware guarantee, new reboot/sign-in test or long-duration soak is claimed.
+The release workflow runs the data, sensor-mapping and native UI test suites on Windows before it publishes; its results are attached to the release as VALIDATION.txt. The v3.00 baseline passed 127,903 native UI checks, 181 data checks and 336 sensor fixture/safety checks. Short live testing was limited to the available Ryzen 9 5900X / RTX 3080 system. No universal hardware guarantee, reboot/sign-in test or long-duration soak is claimed.
 
 The downloadable source ZIP matches the release project. Build with the .NET8 SDK using `./Build-Portable.ps1`. Runtime licensing notices are included in the portable bundle; source modifications and upstream licenses are in `THIRD-PARTY-NOTICES.txt`, `Licenses/` and `OpenHardwareMonitor.Driverless/`. No configuration files, private IP addresses or raw private recordings are part of the release. Automated GitHub publishing is explicit workflow-dispatch only; ordinary source uploads do not automatically publish an intermediate release.

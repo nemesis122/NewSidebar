@@ -111,7 +111,6 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
         if(label=="Hardware-Symbole")System.Windows.Automation.AutomationProperties.SetAutomationId(s,"HardwareIconSize");
         if(label=="Grafikgröße (%)"){System.Windows.Automation.AutomationProperties.SetAutomationId(s,"WholeGraphicSize");s.ToolTip=SettingsText.Translate("Skaliert die ganze Grafik mit Zahl und Einheit. Bei wenig Platz wird die Größe passend begrenzt.",P.SettingsLanguage);}
         var controls=new Grid();controls.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star)});controls.ColumnDefinitions.Add(new(){Width=new GridLength(96)});controls.Children.Add(s);Grid.SetColumn(input,1);controls.Children.Add(input);
-        if(label=="Schriftgröße (%)"){controls.ColumnDefinitions.Add(new(){Width=GridLength.Auto});var resetText=ActionButton("↺",()=>{P.ResetTypography();sidebar.Apply();Navigate("Darstellung");});resetText.Padding=new Thickness(5,3,5,3);resetText.Margin=new Thickness(5,0,0,0);resetText.ToolTip=SettingsText.Translate("Text- und Hardware-Symbolgrößen auf 100 % zurücksetzen",P.SettingsLanguage);System.Windows.Automation.AutomationProperties.SetAutomationId(resetText,"ResetTextSize");Grid.SetColumn(resetText,2);controls.Children.Add(resetText);}
         bool syncing=false;s.ValueChanged+=(_,_)=>{syncing=true;input.Value=s.Value;syncing=false;change(s.Value);sidebar.Apply();};
         input.ValueChanged+=(_,args)=>{if(syncing)return;if(args.NewValue is double number&&double.IsFinite(number)){s.Value=Math.Clamp(number,min,max);}else{syncing=true;input.Value=s.Value;syncing=false;}};
         if(shown!=null&&setShown!=null){var toggle=new Wpf.Ui.Controls.ToggleSwitch{IsChecked=shown(),OnContent=SettingsText.Translate("Anzeigen",P.SettingsLanguage),OffContent=SettingsText.Translate("Anzeigen",P.SettingsLanguage),Margin=new Thickness(12,0,0,0),VerticalAlignment=VerticalAlignment.Center};System.Windows.Automation.AutomationProperties.SetAutomationId(toggle,label=="Hardware-Symbole"?"ShowHardwareIcons":"ShowText:"+label);s.IsEnabled=input.IsEnabled=shown();toggle.Click+=(_,_)=>{bool visible=toggle.IsChecked==true;setShown(visible);s.IsEnabled=input.IsEnabled=visible;sidebar.Apply();};controls.ColumnDefinitions.Add(new(){Width=new GridLength(124)});System.Windows.Automation.AutomationProperties.SetName(toggle,SettingsText.Translate(label,P.SettingsLanguage)+": "+SettingsText.Translate("Anzeigen",P.SettingsLanguage));Grid.SetColumn(toggle,controls.ColumnDefinitions.Count-1);controls.Children.Add(toggle);}
@@ -195,8 +194,7 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
                 Slider("Instrument-Zahlen",50,200,P.InstrumentTextScale*100,5,"0",v=>P.InstrumentTextScale=v/100,()=>P.ShowInstrumentNumbers,v=>P.ShowInstrumentNumbers=v);
                 Slider("Instrument-Einheiten",50,200,P.UnitTextScale*100,5,"0",v=>P.UnitTextScale=v/100,()=>P.ShowInstrumentUnits,v=>P.ShowInstrumentUnits=v);
                 });
-                var resetSizes=ActionButton("Textgrößen zurücksetzen",()=>{P.ResetTypography();sidebar.Apply();Navigate("Textgrößen");});resetSizes.ToolTip=SettingsText.Translate("Text- und Hardware-Symbolgrößen auf 100 % zurücksetzen",P.SettingsLanguage);System.Windows.Automation.AutomationProperties.SetAutomationId(resetSizes,"ResetIndividualTextSizes");page.Children.Add(resetSizes);
-                var showAll=ActionButton("Alle Texte anzeigen",()=>{P.ShowAllTextAndIcons();sidebar.Apply();Navigate("Textgrößen");});showAll.Margin=new Thickness(0,6,0,0);showAll.ToolTip=SettingsText.Translate("Alle Texte und Hardware-Symbole anzeigen",P.SettingsLanguage);System.Windows.Automation.AutomationProperties.SetAutomationId(showAll,"ShowAllSidebarText");page.Children.Add(showAll);
+                var showAll=ActionButton("Alle Texte anzeigen",()=>{P.ShowAllTextAndIcons();sidebar.Apply();Navigate("Textgrößen");});showAll.Margin=new Thickness(0,10,0,0);showAll.ToolTip=SettingsText.Translate("Alle Texte und Hardware-Symbole anzeigen",P.SettingsLanguage);System.Windows.Automation.AutomationProperties.SetAutomationId(showAll,"ShowAllSidebarText");page.Children.Add(showAll);
                 break;
             case "Farben":
                 Heading("Text & Diagramme","Textfarben sowie Farben und Stärke der Balken und Instrumente anpassen.");
@@ -217,7 +215,6 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
                     Slider("Linien- / Balkenstärke (%)",50,160,P.GraphScale*100,10,"0",v=>P.GraphScale=v/100);
                 });
                 Note("Leer = Farbe des Farbschemas. Eigene Farben bleiben beim Designwechsel erhalten.");
-                var resetColors=ActionButton("Farbanpassungen zurücksetzen",()=>{P.TextColor=P.LabelColor=P.HardwareNameColor=P.ValueColor=P.GraphTrackColor=P.SecondaryGraphColor="";P.GraphColors.Clear();P.GraphScale=1;sidebar.Apply();Navigate("Farben");});System.Windows.Automation.AutomationProperties.SetAutomationId(resetColors,"ResetColors");page.Children.Add(resetColors);
                 break;
             case "CPU":
                 Heading("CPU-Temperatur auswählen","Automatisch wird die CPU-/Socket-Temperatur des Mainboards bevorzugt. Du kannst auch einen bestimmten Sensor fest auswählen.");
@@ -300,7 +297,54 @@ public sealed class SettingsWindow : Wpf.Ui.Controls.FluentWindow
                 Note("Einstellungen werden neben der EXE gespeichert.");
                 Refresh(sidebar.Latest); break;
         }
+        PageReset(target);
         SettingsText.Apply(this,P.SettingsLanguage);TranslateNavigation();
+    }
+    // One reset per settings page, for exactly the values that page edits, all built the same way.
+    // A reset needs a second click within four seconds.
+    // Autostart (Windows task), PawnIO and the settings language are never touched.
+    private void PageReset(string target)
+    {
+        var d=new Preferences();
+        (string Text,string Tip,Action Reset)? entry=target switch
+        {
+            "Übersicht" or "System"=>("Alle Einstellungen zurücksetzen","Setzt alle Einstellungen auf den Auslieferungszustand. Sprache, Autostart und Sensorzugriff bleiben erhalten.",ResetAllSettings),
+            "Position"=>("Position & Größe zurücksetzen","Monitor, Bildschirmseite, Breite, Spalten, Einpassen, Platz reservieren und Vordergrund auf Standard. Autostart bleibt unverändert.",()=>{P.Monitor=d.Monitor;P.Side=d.Side;P.ColumnWidth=d.ColumnWidth;P.Columns=d.Columns;P.Fit=d.Fit;P.ReserveSpace=d.ReserveSpace;P.Topmost=d.Topmost;}),
+            "Darstellung"=>("Design & Schrift zurücksetzen","Layout, Farbschema, Schriftart, Schrift- und Grafikgröße, Widget-Hintergrund, Text unter dem Graphen und Temperatureinheit auf Standard.",()=>{P.Layout=d.Layout;P.Theme=d.Theme;P.TextFontFamily=d.TextFontFamily;P.FontScale=d.FontScale;P.InstrumentScale=d.InstrumentScale;P.Opacity=d.Opacity;P.ExpandMultiColumnReadings=d.ExpandMultiColumnReadings;P.Fahrenheit=d.Fahrenheit;}),
+            "Textgrößen"=>("Textgrößen zurücksetzen","Alle Text- und Hardware-Symbolgrößen auf 100 % und alle Texte und Symbole wieder anzeigen.",()=>{P.ResetTypography();P.ShowAllTextAndIcons();}),
+            "Farben"=>("Farbanpassungen zurücksetzen","Alle Text- und Diagrammfarben wieder aus dem Farbschema und Linien- / Balkenstärke auf 100 %.",()=>{P.TextColor=P.LabelColor=P.HardwareNameColor=P.ValueColor=P.GraphTrackColor=P.SecondaryGraphColor="";P.GraphColors.Clear();P.GraphScale=1;}),
+            "CPU"=>("CPU-Temperatur zurücksetzen","Alle CPUs verwenden wieder die automatische Temperaturquelle.",()=>P.CpuTemperatureSources.Clear()),
+            "Karten"=>("Karten & Reihenfolge zurücksetzen","Standardreihenfolge, Standard-Sichtbarkeit der Karten und getrennte Karten statt einer gemeinsamen Kachel.",()=>{P.CombineSensorCards=d.CombineSensorCards;P.HiddenCategories=d.HiddenCategories;if(P.Pins.Count>0)P.HiddenCategories.RemoveAll(c=>c=="Custom");P.Order=d.Order;}),
+            "Geräte" or "Werte"=>("Geräte & Werte zurücksetzen","Alle Geräte und Werte in Standard-Sichtbarkeit, eigene Hardware-Namen werden entfernt. Eigene Sensoren bleiben erhalten.",()=>{P.HiddenDevices.Clear();P.DeviceDefaultsApplied=false;P.HiddenMetrics.Clear();P.VisibleNetworkAddresses.Clear();P.HardwareNames.Clear();}),
+            "Sensoren" or "Eigene Werte"=>("Alle eigenen Werte entfernen","Entfernt alle hinzugefügten Sensoren und ihre Ziel-Widgets.",()=>{P.Pins.Clear();P.PinTargets.Clear();}),
+            "Grenzen"=>("Warngrenzen zurücksetzen","Temperaturgrenze 85 °C und Auslastungsgrenze 95 %.",()=>{P.TempLimit=d.TempLimit;P.LoadLimit=d.LoadLimit;}),
+            "Voraussetzungen"=>("Sensorquelle & Aktualisierung zurücksetzen","Sensorquelle LibreHardwareMonitor + PawnIO und Aktualisierung alle 1000 ms. PawnIO und Sensorzugriff bleiben eingerichtet.",()=>{P.SensorSource=d.SensorSource;P.Interval=d.Interval;}),
+            _=>null
+        };
+        if(entry is not var (text,tip,reset))return;
+        string pageKey=target;bool armed=false;var timer=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromSeconds(4)};
+        Button? button=null;
+        button=ActionButton(text,()=>
+        {
+            if(!armed){armed=true;button!.Content=SettingsText.Translate("Wirklich zurücksetzen? Zum Bestätigen erneut klicken",P.SettingsLanguage);timer.Start();return;}
+            timer.Stop();reset();sidebar.Apply();Navigate(pageKey);
+            ShowStatus("Zurückgesetzt","Die Einstellungen dieser Seite wurden auf Standard gesetzt.",Wpf.Ui.Controls.InfoBarSeverity.Success);
+        });
+        timer.Tick+=(_,_)=>{timer.Stop();armed=false;button!.Content=SettingsText.Translate(text,P.SettingsLanguage);};
+        button.ToolTip=tip;button.Margin=new Thickness(0,18,0,4);button.HorizontalAlignment=HorizontalAlignment.Left;
+        System.Windows.Automation.AutomationProperties.SetAutomationId(button,target switch{"Textgrößen"=>"ResetIndividualTextSizes","Farben"=>"ResetColors",_=>"ResetPage"});
+        page.Children.Add(button);
+    }
+    private void ResetAllSettings()
+    {
+        // Copy every stored setting from a fresh instance; keep language and source-migration bookkeeping.
+        var fresh=new Preferences();
+        foreach(var property in typeof(Preferences).GetProperties(System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.Instance))
+        {
+            if(!property.CanRead||!property.CanWrite||property.GetIndexParameters().Length>0)continue;
+            if(property.Name is nameof(Preferences.SettingsLanguage) or nameof(Preferences.SeededSourceDevices) or nameof(Preferences.PinVisibilityVersion))continue;
+            property.SetValue(P,property.GetValue(fresh));
+        }
     }
     public void SelectDevice(string deviceId){selectedDeviceId=deviceId;SelectPage("Geräte");Navigate("Geräte");}
     private void DevicePage()
